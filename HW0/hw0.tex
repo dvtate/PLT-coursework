@@ -1,0 +1,321 @@
+\documentclass{article}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{amsmath, amsthm, verbatim, enumerate, xcolor, mathpartir}
+
+\input{macros}
+
+
+\title{IIT CS595: Topics \& Applications in Programming Languages\\
+  {\large Homework 0: Rule induction, expressions, type safety}}
+\author{Your name here}
+
+\begin{document}
+\maketitle
+
+\section{Logistics}
+
+\paragraph{Writing up Solutions.}
+If you're looking at this file, you're probably (at least thinking about)
+writing up your solutions in LaTeX. Nice! If you need help, see the writeup
+PDF for a link to resources and other options.
+
+\paragraph{Collaboration.}
+Please see the collaboration policy on the course website.
+
+\paragraph{Submission.}
+Submit your answers as a single .pdf or .doc file (see above) on Blackboard
+under
+the correct assignment. 
+
+
+\section{Evaluation}
+\begin{task}
+  Evaluate the following expression using the dynamics semantics from class,
+  showing each step:
+
+  (Put your answers in the ... and copy and paste the line to add more lines
+  as necessary).
+  
+  \[
+  \begin{array}{l l}
+    &
+    \kwlet{x}{\kwn{2}}{x+(\kwlet{x}{\kwn{1}}{\kwlet{y}{x+\kwn{1}}{x+y}})}\\
+    \step & ...\\
+    \step & ...\\
+  \end{array}
+  \]
+\end{task}
+
+\section{Red-Black Trees}
+In data structures, a red-black tree is a binary tree whose nodes are colored
+either red or black.
+%
+Red-black trees must obey the following rules:
+\begin{itemize}
+\item Leaf nodes must be black.
+\item No red node has red children.
+\item Any path from the root to a leaf contains the same number of black nodes.
+\end{itemize}
+
+We can express red-black trees using the following small language
+(note that this syntax doesn't enforce the rules above; we'll do that later).
+
+\[
+\begin{array}{r l l l}
+  Trees & \tree & \bnfdef & \leaf \bnfalt \bnode{\tree}{\tree} \bnfalt
+  \rnode{\tree}{\tree}\\
+  Colors & \colr & \bnfdef & \bc \bnfalt \rc\\
+\end{array}
+\]
+where~$\leaf$ is a leaf and~$\bnode{\tree_1}{\tree_2}$
+and~$\rnode{\tree_1}{\tree_2}$ represent black and red nodes, respectively,
+with children~$\tree_1$ and~$\tree_2$.
+
+We will define a judgment~$\tree\istree{\colr}{n}$, meaning that~$\tree$ is
+a valid red-black tree whose root node has the color~$\colr$ (which is
+either~$\bc$ or~$\rc$) and all of whose paths from root to leaf have
+exactly~$n$ black nodes.
+
+{
+  \centering
+  \def \MathparLineskip {\lineskip=0.43cm}
+  \begin{mathpar}
+
+    \Rule{RBT-1}
+         {\strut}
+         {\leaf \istree{\bc}{1}}
+    \and
+    \Rule{RBT-2}
+         {\tree_1 \istree{\colr_1}{n}\\
+           \tree_2 \istree{\colr_2}{n}}
+         {\bnode{\tree_1}{\tree_2} \istree{\bc}{n+1}}
+    \and
+    \Rule{RBT-3}
+         {\tree_1 \istree{\bc}{n}\\
+           \tree_2 \istree{\bc}{n}}
+         {\rnode{\tree_1}{\tree_2} \istree{\rc}{n}}
+  \end{mathpar}
+}
+
+Rule~(RBT-1) says that leaves are valid trees as long as they are
+black: a leaf by definition has~1 black node on any path from root to leaf.
+%
+Rule~(RBT-2) allows a black node with two children as long as both
+children are valid red-black trees with the same number of black nodes on any
+path (regardless of what color their roots are); the result is a tree with a
+black root and~$n+1$ black nodes on any path.
+%
+Rule~(RBT-3) enforces that red nodes do not have red children by
+requiring in the premises that both children have black roots.
+
+Define~$\nodes{\tree}$ to be the number of nodes, including leaves, in a
+tree:
+
+\[
+\begin{array}{l l l}
+  \nodes{\leaf} & = & 1\\
+  \nodes{\bnode{\tree_1}{\tree_2}} & = & 1 + \nodes{\tree_1} + \nodes{\tree_2}\\
+  \nodes{\rnode{\tree_1}{\tree_2}} & = & 1 + \nodes{\tree_1} + \nodes{\tree_2}
+\end{array}
+\]
+
+\begin{task}
+  Prove by rule induction that for any tree~$\tree$,
+  color~$\colr \in \{\rc, \bc\}$ and~$n \geq 1$,
+  if~$\tree \istree{\colr}{n}$, then~$\nodes{\tree} \geq 2^{n-1}$.
+
+  {\em You must} use rule induction, not any other proof technique.
+
+  \textbf{Note:} This, together with one or two other properties of
+  red-black trees, proves that a valid red-black tree is approximately
+  balanced.
+\end{task}
+
+\textbf{Answer:}
+    
+\section{Booleans}
+
+In this task, you'll extend the {\Elang} language from class with Booleans:
+
+\[
+\begin{array}{r l l l}
+  \mathit{Types} & \tau & \bnfdef &
+  \kwint \bnfalt \kwstring \bnfalt \kwbool\\
+  \mathit{Expressions} & e & \bnfdef &
+  x \bnfalt
+  \kwn{n} \bnfalt
+  \kws{s} \bnfalt
+  \kwtrue \bnfalt
+  \kwfalse \bnfalt
+  e = e \bnfalt
+  e + e \bnfalt
+  e \cat e \bnfalt
+  \kwlen{e} \bnfalt
+  \kwlet{x}{e}{e} \bnfalt
+  \kwif{e}{e}{e}
+\end{array}
+\]
+
+The expressions~$\kwtrue$ and~$\kwfalse$ are values and have their usual
+meanings.
+%
+The expression~$\kwif{e_1}{e_2}{e_3}$ should evaluate~$e_1$. If it evaluates
+to~$\kwtrue$, it should continue evaluating~$e_2$, otherwise it should
+continue evaluating~$e_3$.
+%
+The other branch {\em should not} be evaluated (this isn't possible to express
+in {\Elang}, but consider the code $\kwif{x = \kwn{0}}{\kwn{0}}{\kwn{42} / x}$: we certainly
+don't want to evaluate the else branch when the condition is true!).
+%
+We've also added an integer equality test~$e_1 = e_2$ to have an interesting
+way of producing Booleans (this is an operation on integers only, not on
+Booleans or strings).
+%
+Recall the dynamic semantics from class, now extended with the rules
+for~$e_1 = e_2$.
+
+\textbf{Note:} There's a lot here, but don't panic:
+the only new rules here are (S-11) through (S-14). The rest are just there
+as a reminder. Your job is only to add Booleans to the language.
+
+{
+  \centering
+  \def \MathparLineskip {\lineskip=0.43cm}
+  \begin{mathpar}
+    \Rule{V-1}
+         {\strut} % This leaves the proper spacing above the line of an axiom
+         {\kwn{n}\val}
+    \and
+    \Rule{V-2}
+         {\strut}
+         {\kws{s}\val}
+    \and
+    \Rule{S-1}
+         {\strut}
+         {\kwn{n_1} + \kwn{n_2} \step \kwn{n_1 + n_2}}
+    \and
+    \Rule{S-2}
+         {\strut}
+         {\kws{s_1} \cat \kws{s_2} \step \kws{s_1s_2}}
+    \and
+    \Rule{S-3}
+         {\strut}
+         {\kwlen{\kws{s}} \step \kwn{\kwlen{s}}}
+    \and
+    \Rule{S-4}
+         {e_1 \step e_1'}
+         {e_1 + e_2 \step e_1' + e_2}
+    \and
+    \Rule{S-5}
+         {e_2 \step e_2'}
+         {\kwn{n_1} + e_2 \step \kwn{n_1} + e_2'}
+    \and
+    \Rule{S-6}
+         {e_1 \step e_1'}
+         {e_1 \cat e_2 \step e_1' \cat e_2}
+    \and
+    \Rule{S-7}
+         {e_2 \step e_2'}
+         {\kws{s_1} \cat e_2 \step \kws{s_1} \cat e_2'} 
+    \and
+    \Rule{S-8}
+         {e \step e'}
+         {\kwlen{e} \step \kwlen{e'}}
+    \and
+    \Rule{S-9}
+         {e_1 \step e_1'}
+         {\kwlet{x}{e_1}{e_2} \step \kwlet{x}{e_1'}{e_2}}
+    \and
+    \Rule{S-10}
+         {v \val}
+         {\kwlet{x}{v}{e_2} \step \sub{v}{x}{e_2}}
+    \and
+    \Rule{S-11}
+         {e_1 \step e_1'}
+         {e_1 = e_2 \step e_1' = e_2}
+    \and
+    \Rule{S-12}
+         {e_2 \step e_2'}
+         {\kwn{n_1} = e_2 \step \kwn{n_1} = e_2'}
+    \and
+    \Rule{S-13}
+         {\strut}
+         {\kwn{n} = \kwn{n} \step \kwtrue}
+    \and
+    \Rule{S-14}
+         {n_1 \neq n_2}
+         {\kwn{n_1} = \kwn{n_2} \step \kwfalse}
+  \end{mathpar}
+}
+
+\begin{task}\label{task:dyn}
+  Write the new inference rules for the dynamic semantics of Booleans and the
+  if-else construct.
+  You should have 2 new rules for the judgment~$e\val$ and 3 new rules
+  for the judgment~$e \step e$.\\
+  (\textbf{Hint:} only one of these will be a search rule.)
+\end{task}
+
+\textbf{Answer:}
+
+We also extend the typing rules with the new rule for equality testing and
+Booleans.
+
+{
+  \centering
+  \def \MathparLineskip {\lineskip=0.43cm}
+  \begin{mathpar}
+    \Rule{T-8}
+         {\typed{\ctx}{e_1}{\kwint}\\
+           % Use \\ to separate multiple premises
+           \typed{\ctx}{e_2}{\kwint}}
+         {\typed{\ctx}{e_1 = e_2}{\kwbool}}
+    \and
+    \Rule{T-9}
+         {\strut}
+         {\typed{\ctx}{\kwtrue}{\kwbool}}
+    \and
+    \Rule{T-10}
+         {\strut}
+         {\typed{\ctx}{\kwtrue}{\kwbool}}
+    \and
+    \Rule{T-11}
+         {\typed{\ctx}{e_1}{\kwbool}\\
+           \typed{\ctx}{e_2}{\tau}\\
+           \typed{\ctx}{e_3}{\tau}}
+         {\typed{\ctx}{\kwif{e_1}{e_2}{e_3}}{\tau}}
+  \end{mathpar}
+}
+
+Note that rule (T-11) doesn't require that the two branches of the conditional
+have a particular type (e.g.~$\kwint$).
+%
+The use of the same metavariable~$\tau$ {\em does} however, mean that the
+two branches~$e_2$ and~$e_3$ must have the {\em same} type, which is then the
+type of the whole expression
+(this makes sense: how could we possibly give a type to the expression
+$\kwif{n = \kwn{0}}{\kwn{42}}{\kws{\text{Oops}}}$?).
+
+\begin{task}
+  Prove the cases of the Preservation theorem for the new rules you
+  added in Task~\ref{task:dyn}.
+\end{task}
+
+\textbf{Answer:}
+
+\begin{task}\label{task-cf}
+  State (you do not have to prove it) the new case of the Canonical Forms
+  lemma for Booleans.
+\end{task}
+
+\textbf{Answer:}
+
+\begin{task}
+  Prove the cases of the Progress theorem for the new rules
+  (T-9) through (T-11). You may (and should) use the new case of Canonical
+  Forms from Task~\ref{task-cf}.
+\end{task}
+
+\textbf{Answer:}
+
+\end{document}
