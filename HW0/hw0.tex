@@ -300,6 +300,32 @@ as a reminder. Your job is only to add Booleans to the language.
 
 \textbf{Answer:}
 
+{
+    \centering
+    \def \MathparLineskip{\lineskip=0.43cm}
+    \begin{mathpar}
+        \Rule{V-3}
+            {\strut}
+            {\kwfalse \val}
+        \and
+        \Rule{V-4}
+            {\strut}
+            {\kwfalse \val}
+        \and
+        \Rule{S-15}
+            {e_1 \step e_1'}
+            {\kwif{e_1}{e_2}{e_3} \step \kwif{e_1'}{e_2}{e_3}}
+        \and
+        \Rule{S-16}
+            {\strut}
+            {\kwif{\kwtrue}{e_1}{e_2} \step e_1}
+        \and
+        \Rule{S-17}
+            {\strut}
+            {\kwif{\kwfalse}{e_1}{e_2} \step e_2}
+    \end{mathpar}
+}
+
 We also extend the typing rules with the new rule for equality testing and
 Booleans.
 
@@ -319,7 +345,7 @@ Booleans.
     \and
     \Rule{T-10}
          {\strut}
-         {\typed{\ctx}{\kwtrue}{\kwbool}}
+         {\typed{\ctx}{\kwfalse}{\kwbool}}
     \and
     \Rule{T-11}
          {\typed{\ctx}{e_1}{\kwbool}\\
