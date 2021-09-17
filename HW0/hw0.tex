@@ -156,7 +156,7 @@ Base Case:
 
 Inductive case assuming $\nodes{\tree} \geq 2^{n-1}$:
 \begin{itemize}
-    \item Case when tree's top element is a black node
+    \item Case when $\tree = \bnode{...}{...}$ -- tree's top element is a black node
         \[
         \begin{array}{l l l l}
             \nodes{\bnode{\tree_1}{\tree_2}} & \geq & 2^{\kwlen{\tree}-1} & \text{the proposition for this case}\\
@@ -165,7 +165,7 @@ Inductive case assuming $\nodes{\tree} \geq 2^{n-1}$:
         \end{array}
         \]
     
-    \item Case when tree's top element is a red node
+    \item Case when $\tree = \rnode{...}{...}$ -- tree's top element is a red node
         \[
         \begin{array}{l l l l}
             \nodes{\rnode{\tree_1}{\tree_2}} & \geq & 2^{\kwlen{\tree}-1} & \text{the proposition for this case}\\
@@ -310,11 +310,11 @@ as a reminder. Your job is only to add Booleans to the language.
         \and
         \Rule{V-4}
             {\strut}
-            {\kwfalse \val}
+            {\kwtrue \val}
         \and
         \Rule{S-15}
             {e_1 \step e_1'}
-            {\kwif{e_1}{e_2}{e_3} \step \kwif{e_1'}{e_2}{e_3}}
+            {\kwif{e_0}{e_1}{e_2} \step \kwif{e_0'}{e_1}{e_2}}
         \and
         \Rule{S-16}
             {\strut}
@@ -371,12 +371,33 @@ $\kwif{n = \kwn{0}}{\kwn{42}}{\kws{\text{Oops}}}$?).
 
 \textbf{Answer:}
 
+Proposition: if $\typed{\ctx}{e}{\tau}$ and $e \step e'$ then $\typed{\ctx}{e'}{\tau}$
+\begin{itemize}
+    \item S-16: When $e = \kwif{\kwtrue}{e_1}{e_2}$\\ \step $e' = e_1$\\
+        by inversion on rule (T-11) $\typed{\ctx}{\kwif{e_0}{e_1}{e_2}}{\tau}$ 
+            and  $\typed{\ctx}{e_1}{\tau}$\\
+        with induction on $e_1 \step e_1'$ this confirms that the type of the stepped value is preserved.
+        
+    \item S-17: When $e = \kwif{\kwfalse}{e_1}{e_2}$\\ \step $e' = e_2$\\
+        by inversion on rule (T-11) $\typed{\ctx}{\kwif{e_0}{e_1}{e_2}}{\tau}$ 
+            and  $\typed{\ctx}{e_2}{\tau}$\\
+        with induction on $e_2 \step e_2'$ this confirms that the type of the stepped value is preserved.
+    
+    \item S-15: When $e = \kwif{e_0}{e_1}{e_2}$\\ \step $e' = \kwif{e_0'}{e_1}{e_2}$\\
+        by inversion on rule (T-11), $\typed{\ctx}{e_0}{\kwbool}$, $\typed{\ctx}{e_1}{\tau}$, 
+            and $\typed{\ctx}{e_2}{\tau}$\\
+        by induction we can assume $e_0 \step e_0'$ with $\typed{\ctx}{e_0'}{\kwbool}$\\
+        thus we can apply (T-11) to assert that the type is the same.
+\end{itemize}
+
 \begin{task}\label{task-cf}
   State (you do not have to prove it) the new case of the Canonical Forms
   lemma for Booleans.
 \end{task}
 
 \textbf{Answer:}
+if $e \val$ and $\typed{}{e}{\kwbool}$ then $e$ is either $\kwtrue$ or $\kwfalse$.
+
 
 \begin{task}
   Prove the cases of the Progress theorem for the new rules
@@ -385,5 +406,22 @@ $\kwif{n = \kwn{0}}{\kwn{42}}{\kws{\text{Oops}}}$?).
 \end{task}
 
 \textbf{Answer:}
+
+Proposition: if $\typed{}{e}{\tau}$ then $e \val$ or $e \step e'$
+\begin{itemize}
+    \item T-9: $e = \kwtrue$, $\tau = \kwbool$\\
+        by V-4 $e \val$
+    \item T-10: $e = \kwfalse$, $\tau = \kwbool$\\
+        by V-3 $e \val$
+    \item T-11: $e = \kwif{e_1}{e_2}{e_3}$\\
+        by inversion on rule T-11 $\typed{}{e_1}{\kwbool}$\\
+        by induction, either $e_1 \val$ or $e_1 \step e_1'$\\
+        by the Canonical Forms lemma for from Task~\ref{task-cf} $e_1$ can hold either \kwtrue or \kwfalse
+        \begin{itemize}
+            \item \kwtrue : S-16 confirms that $\kwif{\kwtrue}{e_2}{e_3} \step e_2$ and thus $e' = e_2$
+            \item \kwfalse : S-17 confirms that $\kwif{\kwfalse}{e_2}{e_3} \step e_3$ and thus $e' = e_3$
+        \end{itemize}
+
+\end{itemize}
 
 \end{document}
