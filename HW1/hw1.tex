@@ -1,0 +1,325 @@
+\documentclass{article}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{amsmath, amsthm, verbatim, enumerate, xcolor, mathpartir}
+
+\input{macros}
+
+\title{IIT CS595: Topics \& Applications in Programming Languages\\
+  {\large Homework 1: Curry-Howard, Expressions continued}}
+\author{Your name here}
+
+\begin{document}
+\maketitle
+
+\section*{Logistics}
+The submission and collaboration instructions (as well as the preference
+for submissions typeset in LaTeX) are the same as for HW0.
+
+\textbf{In particular:}
+Submit your answers as a single .pdf or .doc file  on Blackboard
+under
+the correct assignment. 
+
+\section{The Curry-Howard Correspondence}
+
+We discussed the Curry-Howard Correspondence in class as a correspondence
+between STLC and Intuitionistic Propositional Logic (IPL).
+%
+We can also add universal quantification to both.
+%
+On the logic side, this gives us intuitionistic second-order logic,
+where you can express
+things like $\forall A. \forall B. A \land B \limp B \land A$
+(``for all propositions $A$ and $B$, $A$ and $B$ implies $B$ and $A$'').
+%
+On the PL side, it gives us STLC with ``forall'' types (or, equivalently,
+System F with notations for sums and products defined).
+%
+The type corresponding to the above logic statement would be
+$\kwforall{A}{\kwforall{B}}{\kwarr{(\kwprod{A}{B})}{(\kwprod{B}{A})}}$---
+the logical~$\forall$ and its type equivalent even conveniently use the
+same symbol.
+
+In Classical Logic, we have the bi-implication
+$\forall A. \forall B. (A \limp B) \lbimp (\lnot A \lor B)$.
+%
+Only one direction of this implication is true constructively (i.e., in
+intuitionistic second-order logic).
+
+
+\begin{task}\label{task:ch-type}
+  Write the STLC (with~$\forall$) type corresponding to
+  the logical implication $\forall A. \forall B. (\lnot A \lor B) \limp (A \limp B)$.
+\end{task}
+
+\textbf{Answer:}
+
+\begin{task}
+  Prove the implication above by giving an STLC term of the type you wrote in
+  Task~\ref{task:ch-type}.
+\end{task}
+
+\textbf{Answer:}
+
+It turns out that, for any classically true proposition~$P$, $\lnot \lnot P$
+is true constructively (even if~$P$ is not)\footnote{If you're wondering
+  whether this fact itself is meaningful in programming languages through
+  the Curry-Howard correspondence, Google ``continuation passing transformation''.}.
+
+\begin{task}
+  We've discussed that the Law of the Excluded Middle (now restated with
+  $\forall$),
+  $\forall A. A \lor \lnot A$, is
+  not true constructively. Show that
+  $\lnot \lnot (\forall A. A \lor \lnot A)$ \textit{is} true constructively by
+  giving an STLC term of type
+  
+  \[\kwforall{\alpha}{\kwarr{(\kwarr{(\kwsum{\alpha}{(\kwarr{\alpha}{\kwvoid})})}{\kwvoid})}{\kwvoid}}\]
+
+  \textbf{Hint: }
+    The term will be of the form
+    \[\kwtfun{\alpha}{\kwfun{f}{(\kwarr{(\kwsum{\alpha}{(\kwarr{\alpha}{\kwvoid})})}{\kwvoid})}{~e}}\]
+    for some $e$ such that~$\ftyped{\alpha}{\ctx}{e}{\kwvoid}$,
+    where~$\ctx = f:(\kwarr{(\kwsum{\alpha}{(\kwarr{\alpha}{\kwvoid})})}{\kwvoid})$.
+    Can you construct terms~$e_1$ and $e_2$ such that
+    $\ftyped{\alpha}{\ctx}{e_1}{\kwarr{(\kwarr{\alpha}{\kwvoid})}{\kwvoid}}$
+    and~$\ftyped{\alpha}{\ctx}{e_2}{\kwarr{\alpha}{\kwvoid}}$?
+    How can you then use~$e_1$ and~$e_2$ to construct the function body,~$e$?
+\end{task}
+
+\textbf{Answer:}
+
+\section{Division by zero}
+
+In the past, we've used type systems and the ideas of type safety (progress
+and preservation) to prevent run-time type errors.
+%
+Here, we'll use a type system to prevent another run-time error: division by
+zero.
+%
+Consider a language we'll call~\ezlang{}, whose syntax and dynamics are below.
+
+{
+  \centering
+  \[
+  \begin{array}{l l l}
+    \tau & \bnfdef & \kwnz \bnfalt \kwmz\\
+    e & \bnfdef &
+    \kwn{n} \bnfalt
+    e + e \bnfalt
+    e - e \bnfalt
+    e * e \bnfalt
+    e / e
+  \end{array}
+  \]
+}
+
+{
+  \centering
+  \def \MathparLineskip {\lineskip=0.43cm}
+  \begin{mathpar}
+
+    \Rule{V-1}
+         {\strut}
+         {\kwn{n} \val}
+    \and
+    \Rule{S-1}
+         {e_1 \step e_1'\\
+         \text{\textit{op}} \in \{+, -, *, /\}}
+         {e_1 \mathbin{\text{\textit{op}}} e_2 \step
+           e_1' \mathbin{\text{\textit{op}}} e_2}
+    \and
+    \Rule{S-2}
+         {e_2 \step e_2'\\
+         \text{\textit{op}} \in \{+, -, *, /\}}
+         {\kwn{n_1} \mathbin{\text{\textit{op}}} e_2 \step
+           \kwn{n_1} \mathbin{\text{\textit{op}}} e_2'}
+   \and
+   \Rule{S-3}
+        {\strut}
+        {\kwn{n_1} + \kwn{n_2} \step \kwn{n_1 + n_2}}
+   \and
+   \Rule{S-4}
+        {\strut}
+        {\kwn{n_1} - \kwn{n_2} \step \kwn{n_1 - n_2}}
+   \and
+   \Rule{S-5}
+        {\strut}
+        {\kwn{n_1} * \kwn{n_2} \step \kwn{n_1 n_2}}
+   \and     
+   \Rule{S-6}
+        {n_2 \neq 0}
+        {\kwn{n_1} / \kwn{n_2} \step \kwn{n_1 / n_2}}
+  \end{mathpar}
+}
+
+This is basically our expression language {\elang} from class
+(without~$\kw{let}$), but with only integers and with subtraction,
+multiplication and (integer) division added.
+%
+To save space and time, we have only two search rules: rules (S-1) and
+(S-2) apply for all~4 arithmetic operations in place of \textit{op}.
+%
+Note that rule (S-6), as we'd hope, allows division only if~$\kwn{n_2}$ is
+nonzero.
+%
+That means that a division by zero, e.g.,~$\kwn{1} / \kwn{0}$, is a ``stuck''
+expression: it's not a value and it can't step.
+%
+So in order to make Progress and Preservation hold, we need a type system
+that rules out division by zero.
+%
+The {\ezlang} language has only integers, so we don't need types to
+distinguish integers from strings, but we still have two
+types:~$\kwnz$ (``not zero'') and~$\kwmz$ (``maybe zero''), which we'll use to
+check whether an expression {\em might} evaluate to zero: the idea will be
+that if~$\etyped{e}{\kwnz}$, then~$e$ definitely does not evaluate to zero
+(that is, if~$e \step^* \kwn{n}$, then~$n \neq 0$).
+%
+We'll only allow division by expressions that definitely won't evaluate to
+zero.
+
+\begin{task}
+  Fill in the blanks in the typing rules for {\ezlang}.
+  %
+  The first two are done for you: any integer can have type~$\kwmz$, but
+  it can only have~$\kwnz$ if it's not 0.
+  %
+  There are two rules for multiplication, depending on whether or not both
+  operands are nonzero (think about why).
+
+  \textbf{Hint:} Think about, for each operation (addition, subtraction,
+  multiplication, division), whether performing the
+  operation on two integers
+  can result in zero, depending on whether the two operands can be zero.
+  {\em Integers can be negative.}
+
+\end{task}
+
+%% Lucky you, you're using the template: you can just replace each
+%% \blank below with the answer.
+{
+  \centering
+  \def \MathparLineskip {\lineskip=0.43cm}
+  \begin{mathpar}
+
+    \Rule{T-1}
+         {\strut}
+         {\etyped{\kwn{n}}{\kwmz}}
+    \and
+    \Rule{T-2}
+         {n \neq 0}
+         {\etyped{\kwn{n}}{\kwnz}}
+    \and
+    \Rule{T-3}
+         {\etyped{e_1}{\kwmz}\\
+           \etyped{e_2}{\kwmz}}
+         {\etyped{e_1 + e_2}{\blank}}
+    \and
+    \Rule{T-4}
+         {\etyped{e_1}{\kwmz}\\
+           \etyped{e_2}{\kwmz}}
+         {\etyped{e_1 - e_2}{\blank}}
+    \and
+    \Rule{T-5}
+         {\etyped{e_1}{\kwnz}\\
+           \etyped{e_2}{\kwnz}}
+         {\etyped{e_1 * e_2}{\blank}}
+    \and
+    \Rule{T-6}
+         {\etyped{e_1}{\kwmz}\\
+           \etyped{e_2}{\kwmz}}
+         {\etyped{e_1 * e_2}{\blank}}
+    \and
+    \Rule{T-7}
+         {\etyped{e_1}{\kwmz}\\
+           \etyped{e_2}{\blank}}
+         {\etyped{e_1 / e_2}{\blank}}
+  \end{mathpar}
+}
+
+You may find it concerning that, for example, there's no rule for
+$e_1 + e_2$ when~$e_1$ has type~$\kwnz$ and~$e_2$ has type~$\kwmz$.
+%
+This actually isn't a problem, because\footnote{This is, in fact, a form
+  of {\em subtyping}, which you may be familiar with from languages like Java,
+  where whenever something has one type, it also has a more general type.
+  We'll study this in more detail later in the course.}:
+
+\begin{thm}\label{thm:subtyping}
+  For any expression~$e$, if~$\etyped{e}{\kwnz}$ then~$\etyped{e}{\kwmz}$.
+\end{thm}
+
+
+\begin{task}
+  Prove Theorem~\ref{thm:subtyping} by induction on the derivation of
+  $\etyped{e}{\kwnz}$.
+
+  \textbf{Hint:} If you've set up the typing rules correctly, there should
+  only be two cases. If a typing rule has a conclusion of the form
+  $\etyped{e}{\kwmz}$, we don't need to consider it because it can't be used
+  to derive our assumption~$\etyped{e}{\kwnz}$.
+\end{task}
+
+\textbf{Answer:}
+
+
+The Canonical Forms lemma is similar to before, but now includes the fact that
+values of type~$\kwnz$ are not zero.
+
+\begin{lemma}[Canonical Forms]
+  If~$\etyped{e}{\tau}$ and~$e \val$, then:
+  \begin{enumerate}
+  \item If~$\tau = \kwnz$, then~$e = \kwn{n}$ for some~$n \neq 0$.
+  \item If~$\tau = \kwmz$, then~$e = \kwn{n}$ for some~$n$.
+  \end{enumerate}
+\end{lemma}
+
+Here are the statements of Progress and Preservation for {\ezlang}.
+
+\begin{thm}[Progress]
+  If~$\etyped{e}{\tau}$ then~$e \val$ or there exists~$e'$ such that
+  $e \step e'$.
+\end{thm}
+
+\begin{thm}[Preservation]
+  If~$\etyped{e}{\tau}$ and~$e \step e'$ then~$\etyped{e'}{\tau}$.
+\end{thm}
+
+\begin{task}
+  Prove the Progress and Preservation theorems for {\ezlang}.
+
+  \textbf{Hints/Comments -- you'll want to read these.}
+  \begin{itemize}
+  \item For Progress, you only need to prove the cases for (T-1), (T-2) and
+    (T-7)\footnote{This is {\em not} for the same reason that you only need
+    to prove two cases for Theorem~\ref{thm:subtyping}; the other cases
+    for Progress need to be proven too, this is just me being nice and not
+    making you do them :)}.
+  \item For Preservation, you only need to prove the cases for (S-3),
+    (S-4), (S-5) and (S-6)\footnote{Same.}.
+  \item In the (S-5) case for Preservation, if you do inversion on the typing
+    rules, there will actually be {\em two} rules you need to consider in your
+    inversion and thus, two cases (think about why).
+  \item You can use without proof any (true!) facts of basic arithmetic.
+  \end{itemize}
+\end{task}
+
+\textbf{Answer:}
+
+\begin{task}
+  Give an expression in {\ezlang} that {\em does not} perform a division by
+  zero, but is still {\em not well-typed} by the above typing rules.
+  Suggest a change, addition, refinement, etc., to the type system that could
+  make your expression well-typed (but would still rule out expressions that
+  divide by zero).
+  You don't need to actually implement your suggestion, or even argue that
+  it's possible or practical, and it's fine if your solution still rules out
+  some ``OK'' programs (programs that don't divide by zero).
+  This is just to get you to start thinking about
+  how to get what you want with type systems.
+\end{task}
+
+\textbf{Answer:}
+
+\end{document}
