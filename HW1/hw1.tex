@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
 \usepackage{amsmath, amsthm, verbatim, enumerate, xcolor, mathpartir}
+\usepackage{amsfonts} % for "\mathbb" macro
 
 \input{macros}
 
@@ -53,6 +54,7 @@ intuitionistic second-order logic).
 \end{task}
 
 \textbf{Answer:}
+\kwforall {\alpha} {\kwforall {\beta} {\kwarr{(\kwsum{(\kwarr{\alpha}{\kwvoid})}{\beta})}({\kwarr{\alpha}{\beta}})}}
 
 \begin{task}
   Prove the implication above by giving an STLC term of the type you wrote in
@@ -60,6 +62,20 @@ intuitionistic second-order logic).
 \end{task}
 
 \textbf{Answer:}
+% this is probably not right...
+\kwtfun{\alpha}{\kwtfun{\beta}{
+    \\\hspace*{10mm} 
+    \kwfun{b}{\beta}{
+        \\\hspace*{15mm}
+        \kwfun{l}{\kwsum{(\kwarr{\alpha}{\kwvoid})}{\beta}}{
+            \\\hspace*{20mm} 
+            \kwfun{a}{\alpha}{
+                \\\hspace*{25mm} 
+                \kwcase{l}
+                    {x} {b}
+                    {y} {y}}}}}}
+                    
+When invoked with a value of type $\beta$, the above term will have the type specified in task 1.\\
 
 It turns out that, for any classically true proposition~$P$, $\lnot \lnot P$
 is true constructively (even if~$P$ is not)\footnote{If you're wondering
@@ -88,6 +104,10 @@ is true constructively (even if~$P$ is not)\footnote{If you're wondering
 \end{task}
 
 \textbf{Answer:}
+    \kwtfun{\alpha}{
+        \kwfun{f}{\kwarr {(\kwsum{\alpha}{(\kwarr{\alpha}{\kwvoid})})}{\kwvoid}}{
+        \kwapp{f}{(\kwfun{a}{\kwsum{\alpha}{(\kwarr{\alpha}{\kwvoid})}}{
+            \kwcase{a}{x}{\kwapp{f}{x}}{y}{\kwapp{f}{y}}})}}}
 
 \section{Division by zero}
 
@@ -214,27 +234,27 @@ zero.
     \Rule{T-3}
          {\etyped{e_1}{\kwmz}\\
            \etyped{e_2}{\kwmz}}
-         {\etyped{e_1 + e_2}{\blank}}
+         {\etyped{e_1 + e_2}{\kwmz}}
     \and
     \Rule{T-4}
          {\etyped{e_1}{\kwmz}\\
            \etyped{e_2}{\kwmz}}
-         {\etyped{e_1 - e_2}{\blank}}
+         {\etyped{e_1 - e_2}{\kwmz}}
     \and
     \Rule{T-5}
          {\etyped{e_1}{\kwnz}\\
            \etyped{e_2}{\kwnz}}
-         {\etyped{e_1 * e_2}{\blank}}
+         {\etyped{e_1 * e_2}{\kwnz}}
     \and
     \Rule{T-6}
          {\etyped{e_1}{\kwmz}\\
            \etyped{e_2}{\kwmz}}
-         {\etyped{e_1 * e_2}{\blank}}
+         {\etyped{e_1 * e_2}{\kwmz}}
     \and
     \Rule{T-7}
          {\etyped{e_1}{\kwmz}\\
-           \etyped{e_2}{\blank}}
-         {\etyped{e_1 / e_2}{\blank}}
+           \etyped{e_2}{\kwnz}}
+         {\etyped{e_1 / e_2}{\kwmz}}
   \end{mathpar}
 }
 
@@ -262,7 +282,18 @@ This actually isn't a problem, because\footnote{This is, in fact, a form
 \end{task}
 
 \textbf{Answer:}
-
+\begin{itemize}
+    \item Rule (T-1): already of type \kwmz 
+    \item Rule (T-2): $e = \kwn{n}$ thus apply (T-1)
+    \item Rule (T-3): already of type \kwmz
+    \item Rule (T-4): already of type \kwmz
+    \item Rule (T-5): $e = e_1 * e_2$ \\
+        by inversion $\etyped{e_1}{\kwnz}$ and $\etyped{e_2}{\kwnz}$\\
+        by induction $\etyped{e_1}{\kwmz}$ and $\etyped{e_2}{\kwmz}$\\
+        apply rule (T-6) giving $\etyped{e}{\kwmz}$
+    \item Rule (T-6): already of type \kwmz
+    \item Rule (T-7): already of type \kwmz
+\end{itemize}
 
 The Canonical Forms lemma is similar to before, but now includes the fact that
 values of type~$\kwnz$ are not zero.
@@ -307,6 +338,47 @@ Here are the statements of Progress and Preservation for {\ezlang}.
 
 \textbf{Answer:}
 
+\textbf{Progress:}
+\begin{itemize}
+    \item (T-1): $e = \kwn{n}$ and $\tau = \kwmz$ \\
+        according to (V-1) $e \val$.
+    \item (T-2): $e = \kwn{n}$ and $\tau = \kwnz$ \\
+        according to (V-1) $e \val$.
+    \item (T-7): $e = e_1 / e_2$ and $\tau = \kwmz$ \\
+        by inversion $\etyped{e_2}{\kwnz}$\\
+        by inversion on (T-2) $e_2 \neq 0$\\
+        by induction $e_1$ and $e_2$ either step or are values\\ 
+        if they are values we can use the canonical forms lemma to show that e steps via (S-6)\\
+        if they step then the expression steps, proving the proposition.
+\end{itemize}
+
+\textbf{Preservation:}
+\begin{itemize}
+    \item (S-3): $e = e_1 + e_2$ and $\tau = \kwmz$\\
+        by inversion on (T-3) $\etyped{e_1}{\kwmz}$ and $\etyped{e_2}{\kwmz}$
+        (note that theorem 1 says this includes \kwnz)\\
+        thus by induction on rule (T-3) $\etyped{e'}{\kwmz}$
+    \item (S-4): $e = e_1 - e_2$ and $\tau = \kwmz$\\
+        by inversion on (T-3) $\etyped{e_1}{\kwmz}$ and $\etyped{e_2}{\kwmz}$
+        (note that theorem 1 says this includes \kwnz)\\
+        thus by induction on rule (T-3) $\etyped{e'}{\kwmz}$
+    \item (S-5): $e = e_1 * e_2$
+        there are two cases to consider
+        \begin{enumerate}
+            \item when $\etyped{e_1}{\kwnz}$ and $\etyped{e_2}{\kwnz}$, $\tau = \kwnz$\\
+                by inversion on (T-5) $\etyped{e_1}{\kwnz}$ and $\etyped{e_2}{\kwnz}$\\
+                thus by induction $\etyped{e}{\kwnz}$
+            \item when $\etyped{e_1}{\kwmz}$ or $\etyped{e_2}{\kwmz}$, $\tau = \kwmz$\\
+                by inversion on (T-6) $\etyped{e_1}{\kwmz}$ and $\etyped{e_2}{\kwmz}$ 
+                (note that theorem 1 says this includes \kwnz)\\
+                thus by induction $\etyped{e'}{\kwmz}$
+        \end{enumerate}
+    \item (S-6): $e = e_1 / e_2$ and $\tau = \kwmz$\\
+        by inversion on (T-7) $\etyped{e_1}{\kwmz}$ and $\etyped{e_2}{\kwnz}$\\
+        thus by induction $\etyped{e'}{\kwmz}$
+\end{itemize}
+
+
 \begin{task}
   Give an expression in {\ezlang} that {\em does not} perform a division by
   zero, but is still {\em not well-typed} by the above typing rules.
@@ -321,5 +393,26 @@ Here are the statements of Progress and Preservation for {\ezlang}.
 \end{task}
 
 \textbf{Answer:}
+
+\textbf{Example Expression:} $555 / (1 + 4)$ \\
+We could extend the type system, allowing in addition to tracking zero-ness we also track the signedness of numbers. So we could have some new addition rules like the following shorthand for the type rules where u* means unsigned ($\ge 0$) and s* means signed ($\mathbb{Z}$)
+
+\begin{enumerate}
+    \item umz + umz : umz
+    \item umz + unz : unz
+    \item unz + umz : unz
+    \item unz + unz : unz\\
+
+    \item smz + smz : smz
+    \item smz + snz : smz
+    \item snz + smz : smz
+    \item snz + snz : smz\\
+
+    \item depending on implementation, it might also make sense to add negative signed types
+\end{enumerate}
+
+So in the example we could have used rule 4 to verify that the denominator would not be zero. This would still not work with all valid expressions but at least this could potentially be done at compile time.
+
+Also partial evaluation could potentially help.
 
 \end{document}
