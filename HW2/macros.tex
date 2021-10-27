@@ -1,0 +1,52 @@
+\newcommand{\blank}{{\color{red}{\underline{?}}}}
+
+\newtheorem{task}{Task}
+\newtheorem{lemma}{Lemma}
+\newtheorem{thm}{Theorem}
+
+%% Inference rules
+%Inference rule with a title
+\newcommand{\Rule}[4][]{\ensuremath{\inferrule*[right={(#2)},#1]{#3}{#4}}}
+%Inference rule with no title
+\newcommand{\RuleNoLabel}[3][]{\ensuremath{\inferrule*[#1]{#2}{#3}}}
+
+%% BNF
+\newcommand{\bnfdef}{\mathop{::=}}
+\newcommand{\bnfalt}{\mathbin{|}}
+
+%% STLC
+\newcommand{\kw}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\kwunitt}{\kw{unit}}
+\newcommand{\kwarr}[2]{#1 \rightarrow #2}
+\newcommand{\kwprod}[2]{#1 \times #2}
+\newcommand{\kwsum}[2]{#1 + #2}
+\newcommand{\kwvoid}{\kw{void}}
+\newcommand{\kwunit}{\kw{()}}
+\newcommand{\kwfun}[3]{\lambda #1 : #2. #3}
+\newcommand{\kwapp}[2]{#1~#2}
+\newcommand{\kwpair}[2]{(#1, #2)}
+\newcommand{\kwvpair}[2]{\langle #1, #2 \rangle}
+\newcommand{\kwfst}[1]{\kw{fst}~#1}
+\newcommand{\kwsnd}[1]{\kw{snd}~#1}
+\newcommand{\kwinl}[1]{\kw{inl}~#1}
+\newcommand{\kwinr}[1]{\kw{inr}~#1}
+\newcommand{\kwcase}[5]{\kw{case}~#1~\kw{of}~\{#2. #3; #4. #5\}}
+\newcommand{\kwabort}[1]{\kw{abort}~#1}
+\newcommand{\kwloc}{\ell}
+
+\newcommand{\estore}{\emptyset}
+\newcommand{\store}{\sigma}
+\newcommand{\stsing}[1]{[#1]}
+\newcommand{\stjoin}[2]{#1 \uplus #2}
+
+%% Judgments
+\newcommand{\ctx}{\ensuremath{\Gamma}}
+\newcommand{\val}{\ensuremath{~\mathsf{val}}}
+\newcommand{\step}{\ensuremath{\mapsto}}
+\newcommand{\typed}[3]{\ensuremath{#1 \vdash #2 : #3}}
+\newcommand{\sub}[3]{\ensuremath{[#1/#2]#3}}
+\newcommand{\fv}[1]{\ensuremath{\mathsf{FV}(#1)}}
+\newcommand{\fresh}{\ensuremath{~\mathsf{fresh}}}
+\newcommand{\cfg}[2]{#1; #2}
+\newcommand{\eval}[3][]{#2 \Downarrow^{#1} #3}
+%\newcommand{\erase}[1]{\mathit{Erase}(#1)}
