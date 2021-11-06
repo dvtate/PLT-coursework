@@ -6,7 +6,7 @@
 
 \title{IIT CS595: Topics \& Applications in Programming Languages\\
   {\large Homework 2: Memory and Cost Semantics}}
-\author{Your Name Here}
+\author{Dustin Van Tate Testa}
 \date{Out: Tuesday, Oct. 19\\
   Due: Wednesday, Nov. 3 11:59pm CDT\\
   %\vspace{0.5cm}
@@ -191,24 +191,24 @@ too low-level a detail for the abstract big-step semantics.
          {\eval[0]{v}{v}}
     \and
     \Rule{E-2}
-         {\eval[\blank]{e_1}{\kwfun{x}{\tau}{e}}\\
-           \eval[\blank]{e_2}{v}\\
-           \eval[\blank]{\sub{v}{x}{e}}{v'}}
-         {\eval[\blank]{\kwapp{e_1}{e_2}}{v'}}
+         {\eval[n_1]{e_1}{\kwfun{x}{\tau}{e}}\\
+           \eval[n_2]{e_2}{v}\\
+           \eval[n_3]{\sub{v}{x}{e}}{v'}}
+         {\eval[n_1 + n_2 + n_3]{\kwapp{e_1}{e_2}}{v'}}
     \and
     \Rule{E-3}
-         {\eval[\blank]{e_1}{v_1}\\
-           \eval[\blank]{e_2}{v_2}
+         {\eval[n_1]{e_1}{v_1}\\
+           \eval[n_2]{e_2}{v_2}
          }
-         {\eval[\blank]{\kwpair{e_1}{e_2}}{\kwvpair{v_1}{v_2}}}
+         {\eval[n_1 + n_2 + 1]{\kwpair{e_1}{e_2}}{\kwvpair{v_1}{v_2}}}
     \and
     \Rule{E-4}
-         {\eval[\blank]{e}{\kwvpair{v_1}{v_2}}}
-         {\eval[\blank]{\kwfst{e}}{v_1}}
+         {\eval[n]{e}{\kwvpair{v_1}{v_2}}}
+         {\eval[n]{\kwfst{e}}{v_1}}
     \and
     \Rule{E-5}
-         {\eval[\blank]{e}{\kwvpair{v_1}{v_2}}}
-         {\eval[\blank]{\kwsnd{e}}{v_2}}
+         {\eval[n]{e}{\kwvpair{v_1}{v_2}}}
+         {\eval[n]{\kwsnd{e}}{v_2}}
   \end{mathpar}
 }
 
@@ -325,7 +325,23 @@ I'll prove one, you'll prove another.
 \end{task}
 
 \begin{proof}
-  Your proof here.
+  By induction on the derivation of
+    $\cfg{\store}{e} \step^* \cfg{\store'}{e'}$.
+    \begin{itemize}
+    \item (M-1). Then~$e = e'$ and~$\store = \store'$.
+      By (M-1),
+      $\cfg{\store}{\kwfst{e}} \step^*
+      \cfg{\store}{\kwfst{e}}$.
+    \item (M-2)
+      Then~$\cfg{\store}{e} \step \cfg{\store''}{e''}$ 
+      and $\cfg{\store''}{e''} \step^* \cfg{\store}{e'}$.\\
+      By (S-7), 
+      $\cfg{\store}{\kwfst{e}} \step \cfg{\store''}{\kwfst{e''}}$.
+      By induction,
+      $\cfg{\store''}{\kwfst{e''}} \step^* \cfg{\store'}{\kwfst{e'}}$
+      so by (M-2),
+      $\cfg{\store}{\kwfst{e}} \step^* \cfg{\store'}{\kwfst{e'}}$
+    \end{itemize}
 \end{proof}
   
 We also need to know that if we have two sequences of steps, we can ``glue''
@@ -348,6 +364,27 @@ them together.
 
 \begin{proof}
   Your proof here.
+  \begin{itemize}
+    \item by induction on derivation of the step judgement, either
+        \begin{itemize}
+            \item $e = e' = e''$ and $\store = \store' = \store''$:\\
+                in which case for both step judgements (M-1) would be applied
+                
+            \item $e' = e''$ and $\store' = \store''$:\\
+                in which case (M-2) is applied to the first step and (M-1) applied after
+                % \begin{mathpar}
+                %     \inferrule*
+                %     {\inferrule* {$ $}{\cfg{\store}{e} \step \cfg{\store'''}{e'''}}\\
+                %       \inferrule* {$ $}{\cfg{\store'''}{e'''} \step^* \cfg{\store'}{e'}}}
+                %     {\cfg{\store}{e} \step^* \cfg{\store'}{e'}}
+                % \end{mathpar}
+            \item $e = e'$ and $\store = \store'$:\\
+                in which case (M-1) is applied to make the first step and then (M-2) after
+                
+            \item all $e$ and all $\store$ values are unique:\\
+                in which case (M-2) is applied twice
+        \end{itemize}
+  \end{itemize}
 \end{proof}
 
 Now we can prove the forward direction of the theorem.
@@ -414,13 +451,116 @@ I'll prove one case as an example.
       \cfg{\stjoin{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{\store_3}}
           {v'}$.
           We have
-      $|\stjoin{\store_1}{\stjoin{\store_2}{\stsing{\kwvpair{v_1}{v_2}}}}| =
+      $|\stjoin{\store_1}{\stjoin{\store_2}{\store_3}}| =
       |\store_1| + |\store_2| + |\store_3| = n$.
 
-\item (E-1).
+\item (E-1). Then $e \val$ and $\eval[0]{e}{v}$ and $e = v$ and $n = 0$ which by lemma 1 translates to $\cfg{\estore}{e} \step^* \cfg{\store}{e}$. Because values cannot step according to the defined small-step semantics rules (exhaustion of rules (V- 1..3)), the $\step^*$ judgement must follow rule (M-1), thus $\estore = \store$ and $|\store| = n = 0$.
+
 \item (E-3).
+    Then~$e = \kwpair{e_1}{e_2}$
+    and~$\eval[n_1]{e_1}{v_1}$
+    and~$\eval[n_2]{e_2}{v_2}$
+    and~$\eval[1]{\kwpair{v_1}{v_2}}{\kwvpair{v_1}{v_2}}$
+    and~$n = n_1 + n_2 + 1$.
+    By induction,
+    \[
+    \cfg{\store}{e_1} 
+    \step^* \cfg{\stjoin{\store}{\store_1}}{v_1}
+        \text{~and~}
+    \cfg{\store}{e_2}
+    \step^* \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_2}
+        \text{~and~}
+    \cfg{\store}{e_2} 
+    \step^* \cfg{\stjoin{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{\store_3}}{v_2}
+    \]
+    and
+    \[|\store_1| = n_1\text{~and~}|\store_2| = n_2\text{~and~}|\store_3| = 1\]
+    By Lemma~\ref{lem:compose-exps},
+    $
+        \cfg{\store}{e} 
+        \step^* \cfg{\stjoin{\store}{\store_1}}{\kwpair{v_1}{e_1}}
+    $and~$
+        \cfg{\stjoin{\store}{\store_1}}{\kwpair{v_1}{e_1}}
+        \step^* \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{\kwpair{v_1}{v_2}}
+    $.\\
+    By Lemma~\ref{lem:compose-steps},
+      $\cfg{\store}{e} 
+        \step^*
+         \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{\kwpair{v_1}{v_2}}$.\\
+    By (S-6) and Lemma~\ref{lem:compose-steps},
+      $\cfg{\store}{e} \step^*
+      \cfg{\stjoin{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{\stsing{\kwvpair{v_1}{v_2}}}}
+          {\kwvpair{v_1}{v_2}}$.
+          We have
+      $|\stjoin{\store_1}{\stjoin{\store_2}{\stsing{\kwvpair{v_1}{v_2}}}}| =
+      |\store_1| + |\store_2| + |\stsing{\kwvpair{v_1}{v_2}}| = n$.
+
 \item (E-4).
+    Then~$e = \kwfst{e_1}$
+    and~$\eval[n_1]{e_1}{\kwvpair{v_1}{v_2}}$
+    and~$\eval[0]{e}{v_1}$
+    and~$n = n_1 + 0$.
+    By induction,
+    \[
+    \cfg{\store}{e_1} \step^* \cfg{\stjoin{\store}{\store_1}}{\kwvpair{v_1}{v_2}}
+    \text{~and~}
+    \cfg{\stjoin{\store}{\store_1}}{\kwfst{\kwvpair{v_1}{v_2}}} 
+        \step^* 
+        \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_1}
+    \]
+    and
+    \[|\store_1| = |\store_2| = n_1 \text{~and~} n = n_1 \]
+    By Lemma~\ref{lem:compose-exps},
+    $
+        \cfg{\store}{e} \step^* \cfg{\stjoin{\store}{\store_1}}{\kwfst{\kwvpair{v_1}{v_2}}}
+    $~and~$
+        \cfg{\stjoin{\store}{\store_1}}{\kwfst{\kwvpair{v_1}{v_2}}} 
+        \step^* 
+        \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_1}
+    $.\\
+    By Lemma~\ref{lem:compose-steps},
+      $\cfg{\store}{e} \step^*
+        \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_1}$.\\
+    By (S-8) and Lemma~\ref{lem:compose-steps},
+      $\cfg{\store}{e} \step^*
+      \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_1}$.
+          We have
+      $|\stjoin{\store_1}{\store_2}| =
+      |\store_1| = n$.
+
 \item (E-5).
+    Then~$e = \kwsnd{e_1}$
+    and~$\eval[n_1]{e_1}{\kwvpair{v_1}{v_2}}$
+    and~$\eval[0]{e}{v_1}$
+    and~$n = n_1 + 0$.
+    By induction,
+    \[
+    \cfg{\store}{e_1} \step^* \cfg{\stjoin{\store}{\store_1}}{\kwvpair{v_1}{v_2}}
+    \text{~and~}
+    \cfg{\stjoin{\store}{\store_1}}{\kwsnd{\kwvpair{v_1}{v_2}}} 
+        \step^* 
+        \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_2}
+    \]
+    and
+    \[|\store_1| = |\store_2| = n_1 \text{~and~} n = n_1 \]
+    By Lemma~\ref{lem:compose-exps},
+    $
+        \cfg{\store}{e} \step^* \cfg{\stjoin{\store}{\store_1}}{\kwsnd{\kwvpair{v_1}{v_2}}}
+    $~and~$
+        \cfg{\stjoin{\store}{\store_1}}{\kwsnd{\kwvpair{v_1}{v_2}}} 
+        \step^* 
+        \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_2}
+    $.\\
+    By Lemma~\ref{lem:compose-steps},
+      $\cfg{\store}{e} \step^*
+        \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_2}$.\\
+    By (S-9) and Lemma~\ref{lem:compose-steps},
+      $\cfg{\store}{e} \step^*
+      \cfg{\stjoin{\stjoin{\store}{\store_1}}{\store_2}}{v_2}$.
+          We have
+      $|\stjoin{\store_1}{\store_2}| =
+      |\store_1| = n$.
+
   \end{itemize}
 \end{proof}
 
@@ -461,9 +601,110 @@ then~$\eval[n+k]{e}{v}$, where~$k$ counts any pairs allocated by that step.
       $\eval[n_1 + k]{e_1}{\kwfun{x}{\tau}{e}}$
       and~$|\store'| = k$.
       By (E-2),
-      $\eval[n+k]{e}{v}$.
+      $\eval[n+k]{e}{v'}$.
 
-    \item Your other cases here...
+    \item (S-2) Then~$e = \kwapp{\kwfun{x}{\tau}{e_1}}{e_2}$
+        and~$e' = \kwapp{\kwfun{x}{\tau}{e_1}}{e_2'}$.
+        By inversion on (E-2),
+        $\eval[0]{\kwfun{x}{\tau}{e_1}}{\kwfun{x}{\tau}{e_1}}$
+        and~$\eval[n_2]{e_2}{v'}$
+        and~$\eval[n_3]{\sub{v'}{x}{e_1}}{v}$
+        and~$n = 0 + n_2 + n_3$.
+        By induction,
+        $\eval[n' + k]{e_2}{v'}$
+        and~$|\store'| = k$.
+        By (E-2),
+        $\eval[n+k]{e}{v}$.
+        
+    \item (S-3) Then~$e = \kwapp{\kwfun{x}{\tau}{e_1}}{v'}$
+        and~$e' = \kwapp{\kwfun{x}{\tau}{e_1}}{e_2'}$
+        and~$v' \val$.
+        By inversion on (E-2),
+        $\eval[0]{\kwfun{x}{\tau}{e_1}}{\kwfun{x}{\tau}{e_1}}$
+        and~$\eval[0]{v'}{v'}$
+        and~$\eval[n_1]{\sub{v'}{x}{e_1}}{v}$
+        and~$n = 0 + 0 + n_1$.
+        By induction,
+        $\eval[n' + k]{\sub{v'}{x}{e_1}}{v}$
+        $|\store'| = k$.
+        By (E-2),
+        $\eval[n+k]{e}{v}$.
+    
+    \item (S-4) Then~$e = \kwpair{e_1}{e_2}$
+        and~$e' = \kwpair{e_1'}{e_2}$.
+        By inversion on (E-3),
+        $\eval[n_1]{e_1}{v_1}$
+        and~$\eval[n_2]{e_2}{v_2}$
+        and~$\eval[1]{\kwpair{v_1}{v_2}}{\kwvpair{v_1}{v_2}}$
+        and~$n = n_1 + n_2 + 1$.
+        By induction,
+        $\eval[n_1 + k]{e_1}{v_1}$
+        $|\store'| = k$.
+        By (E-3),
+        $\eval[n+k]{e}{v}$
+    \item (S-5) Then~$e = \kwpair{v_1}{e_2}$
+        and~$e' = \kwpair{v_1}{e_2'}$.
+        By inversion on (E-3),
+        $\eval[0]{v_1}{v_1}$
+        and~$\eval[n_2]{e_2}{v_2}$
+        and~$\eval[1]{\kwpair{v_1}{v_2}}{\kwvpair{v_1}{v_2}}$
+        and~$n = 0 + n_2 + 1$.
+        By induction,
+        $\eval[n_2 + k]{e_2}{v_2}$
+        $|\store'| = k$.
+        By (E-3),
+        $\eval[n+k]{e}{v}$
+    \item (S-6) Then~$e = \kwpair{v_1}{v_2}$
+        and~$e' = \kwpair{v_1}{v_2}$.
+        By inversion on (E-3),
+        $\eval[0]{v_1}{v_1}$
+        and~$\eval[0]{v_2}{v_2}$
+        and~$\eval[1]{\kwpair{v_1}{v_2}}{\kwvpair{v_1}{v_2}}$
+        and~$n = 0 + 0 + 1$.
+        By induction,
+        $\eval[n_2 + k]{e}{\kwvpair{v_1}{v_2}}$
+        $|\store'| = k = 1$.
+        By (E-3),
+        $\eval[n+k]{e}{v}$
+        
+    \item (S-7) Then~$e = \kwfst{e_1}$ and~$e' = \kwfst{e_1'}$.
+        By inversion on (E-4),
+        $\eval[n_1]{e_1}{\kwvpair{v_1}{v_2}}$
+        and~$\eval[n_1]{\kwfst{e_1}}{v_1}$
+        and~$n = n_1$.
+        By induction,
+        $\eval[n_1 + k]{e}{v_1}$
+        $|\store'| = k$.
+        By (E-4),
+        $\eval[n+k]{e}{v}$
+    
+    \item (S-8) Then~$e = \kwfst{\kwvpair{v_1}{v_2}}$ and~$e' = v_1$.
+        By inversion on (E-4),
+        $\eval[0]{\kwvpair{v_1}{v_2}}{\kwvpair{v_1}{v_2}}$
+        $\eval[0]{e'}{v_1}$, so $n = 0$.
+        By (S-8), $\store' = \estore$, so $k = 0$.
+        By (E-4),
+        $\eval[n+k]{e}{v}$
+    
+    \item (S-9) Then~$e = \kwsnd{e_1}$ and~$e' = \kwsnd{e_1'}$.
+        By inversion on (E-4),
+        $\eval[n_1]{e_1}{\kwvpair{v_1}{v_2}}$
+        and~$\eval[n_1]{\kwfst{e_1}}{v_2}$
+        and~$n = n_1$.
+        By induction,
+        $\eval[n_1 + k]{e}{v_1}$
+        $|\store'| = k$.
+        By (E-5),
+        $\eval[n+k]{e}{v}$
+    
+    \item (S-10) Then~$e = \kwfst{\kwvpair{v_1}{v_2}}$ and~$e' = v_1$.
+        By inversion on (E-5),
+        $\eval[0]{\kwvpair{v_1}{v_2}}{\kwvpair{v_1}{v_2}}$
+        $\eval[0]{e'}{v_2}$, so $n = 0$.
+        By (S-10), $\store' = \estore$, so $k = 0$.
+        By (E-5),
+        $\eval[n+k]{e}{v}$
+    
     \end{itemize}
   \end{proof}
 
@@ -494,7 +735,5 @@ I'll just do it so you can be done with the homework.
   where~$k = |\store_1|$.
   We have~$n + k = |\stjoin{\store_1}{\store_2}|$.
 \end{proof}
-  
 
-  
 \end{document}
