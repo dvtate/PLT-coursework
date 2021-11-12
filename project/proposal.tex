@@ -1,0 +1,102 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with`a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\title{Verifying a Postfix Language \\
+    \large CS595 Final Project Proposal}
+\author{Dustin Van Tate Testa and Andrew Neth}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+We intend to formalize and give some proofs of soundness to a subset of \href{https://github.com/dvtate/postfix-haskell}{a functional, postfix language}.
+\end{abstract}
+
+\section{The Language}
+This section describes some of the key features of the original language. It is included only to show that the subset is a good representation of the original language and thus can be skipped.
+
+\subsection{Syntax}
+\begin{itemize}
+    \item \textbf{Primitive Literals:} The language supports numeric and string literals although in the paper we will likely only cover numbers.
+
+    \item \textbf{Lambdas:} Lambdas aka macros are enclosed within \texttt{(: ... )} and can have type annotations, for example \texttt{((I32 I32) (I32) rec: ... )}.
+
+    \item \textbf{Tuples:} Tuples are enclosed within parenthesis. There is no reason to include separators like commas.
+
+    \item \textbf{Identifiers:} there are two types of identifiers, escaped identifiers which start with \texttt{\$} are generally used for assignment and unescaped identifiers which are used for to invoke the value to which the identifier refers. To use an identifier \texttt{x} within a namespace \texttt{n} one can use a dot, ie - \texttt{\$n.x}
+
+    \item \textbf{Functions:} function overloading is the only supported form of branching in the language. The syntax for the \texttt{fun} operator is as follows. 
+
+    \texttt{(($..._1$)($..._2$ I32): Condition ) (: Action ) \$Identifier fun}. 
+
+    In the final paper this will likely get replaced with a ternary.
+
+    \item \textbf{Other Operators:} Although the majority of primitive operators are defined in the standard library, the compiler actually has a few builtins as well. Athough these are very important to actually using the language they aren't worthy of listing out in their entirety here. Some notable examples include: \texttt{require}, \texttt{use}, \texttt{import}, \texttt{export}, \texttt{asm}, \texttt{namespace}, \texttt{type}, \texttt{unpack}, \texttt{class}, \texttt{=}, \texttt{|}, \texttt{@}, \texttt{\~}, \texttt{==}, \texttt{make}
+
+\end{itemize}
+
+\subsection{Type System}
+The language currently features an incomplete type system (with some compile-time-only values not fitting into the type system). However for the paper we will simplify it to exclude these values (notably namespaces, string literals, etc.) as they don't do anything interesting.
+
+\begin{itemize}
+    \item \textbf{Primitives:} Types supported by WebAssembly: \texttt{I32 I64 F32 F64}
+    \item \textbf{Tuples:} Types which represent the concept of adjacent values on the stack. And thus actually represent multiple values when compiled.
+    \begin{itemize}
+        \item \textbf{Relevant operators:} \texttt{pack unpack}.
+        \item \textbf{Example:} \texttt{(F32 F32 F32) \$FloatVec3 =}.
+    \end{itemize}
+
+    \item \textbf{Unions:} Created using the \texttt{|} operator, either of it's two operands can satisfy it. At present, all union types must be resolved at compile time, but this should be resolved once the garbage collector is finished.
+
+    \item \textbf{Unit \& Void}: \texttt{Unit} is the type of the empty tuple and \texttt{Void} does not typecheck.
+    
+    \item \textbf{\texttt{Any}}: matches with any given type/value. Useful for pattern matching.
+
+    \item \textbf{\texttt{Arrow} Types}: the \texttt{Arrow} operator is used for macro types. 
+    Example: \texttt{(F32 F32) (F32) Arrow \$BinaryOperator =}
+
+    \item \textbf{Classes:} A similar concept in other languages would likely be 'traits', adding a class to a type gives it functionality designated by that class. Thus we can define \texttt{I32 class \$Color =} and then use bitwise operators in order to make the \texttt{Color} class represent a 32bit packed RGBA value. In addition to there are a number of more advanced ways to use the class
+    
+    \begin{itemize}
+        \item \textbf{Instantiating:} the \texttt{make} operator is used to add a class to a value. So for the RGBA class we can do \texttt{0xff00ff80 Color make \$half\_magenta =}
+
+        \item \textbf{Subclasses:} We can make a class of our color class to add new functionality, for example \texttt{Color class \$RenderEngineColor =}
+
+        \item \textbf{Parametric Classes:} In addition to taking types as arguments, the class operator can take a macro, this allows one to describe more complex types. One such usage is to define type operators.
+
+        \texttt{(: \$T = (T T T) ) class \$Vec3 =}\\
+        \texttt{(1 2 3) I32 Vec3 make \$pos =}
+
+        Note that here \texttt{class} is technically optional and the following would be the same but less strict.
+
+        \texttt{(: \$T = (T T T) ) \$Vec3 =}\\
+        \texttt{(1 2 3) \$pos =}\\
+        so that \texttt{pos type I32 Vec3 == :data} gives 1
+
+        In the paper we will avoid ambiguity likely take the approach of adding 'type macros' with a brackets syntax instead.
+
+        \item \textbf{Recursive Classes:} By marking the macro in the class as recursive it's only accessed as a reference to an object stored on the heap. This allows the programmer to define recursive types. Not currently supported.
+
+        \texttt{(rec: \$T = (T List T) Unit | ) class \$List =}\\
+        \texttt{( 1 ( 2 () I32 List make ) I32 List make ) I32 List make}
+    \end{itemize}
+\end{itemize}
+
+\section{The Subset}
+Here we describe at high level the subset of the language to formalize.
+
+\section{The Formalization}
+Here we describe the some ideas for rules, context, etc.
+
+\end{document}
