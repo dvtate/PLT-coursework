@@ -1,13 +1,19 @@
 \documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
 \usepackage[english]{babel}
 
 % Set page size and margins
+% Replace `letterpaper' with`a4paper' for UK/EU standard size
 \usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
 
 % Useful packages
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\input{macros}
 
 \title{Verifying a Postfix Language \\
     \large CS595 Final Project Proposal}
@@ -33,7 +39,7 @@ This section describes some of the key features of the original language. It is 
 \begin{itemize}
     \item \textbf{Primitive Literals:} The language supports numeric and string literals although in the paper we will likely only cover numbers.
 
-    \item \textbf{Lambdas:} Lambdas aka macros are enclosed within \texttt{(: ... )} and can have type annotations, for example \texttt{((I32 I32) (I32) rec: ... )}.
+    \item \textbf{closures:} closures aka macros are enclosed within \texttt{(: ... )} and can have type annotations, for example \texttt{((I32 I32) (I32) rec: ... )}.
 
     \item \textbf{Tuples:} Tuples are enclosed within parenthesis. There is no reason to include separators like commas.
 
@@ -56,7 +62,7 @@ This section describes some of the key features of the original language. It is 
     # Import basic math and logic
     "stdlib/prelude.phs" require use
 
-    # Define a recursive factorial lambda
+    # Define a recursive factorial closure
     ((I32)(I32) rec:
         $n =
         (: 1 ) (: 1 ) $branch fun
@@ -132,7 +138,7 @@ $tern ~ :type # :type - (I32 $A $A) ($A) Arrow
 ((I32 Any Any): type swap type == && ) (: ( $c $a $b ) = a ) $tern fun
 \end{verbatim}
 
-\subsection{Lambdas}
+\subsection{closures}
 Via the same syntax already defined
 
 \subsection{Recursion}
@@ -167,7 +173,7 @@ So in summary our builtin operators would be:
     \item \texttt{type} - get type of argument (equivalent to \texttt{type()} in python
     \item \texttt{==} - current plan is to have an ambiguous == operator which accepts either 2 types or 2 equivalently typed values like in the language
     \item \texttt{|} - used to form type unions
-    \item \texttt{Arrow} - lambda types
+    \item \texttt{Arrow} - closure types
     \item \texttt{Unit} - keyword to distinguish from the empty tuple ()
     \item \texttt{Void} - used due to lack of syntax for empty union
 \end{itemize}
@@ -175,13 +181,41 @@ So in summary our builtin operators would be:
 \subsection{Notably Not Included}
 
 \subsubsection{Classes}
-It would be nice to include classes in our language (notably recursive classes). However this would involve subtyping and some other concepts so might not have time to add them to the model
-
-As much as we would like to include classes (notably recursive classes), it would likely add excess complexity, requiring subtyping (on N dimensions); untyped lambdas which can operate on types; and likely some other painpoints. And it's not clear how they could make the system unsafe as apart from being used to define recursive types are simply specialized versions of preexisting types.
+As much as we would like to include classes (notably recursive classes), it would likely add excess complexity, requiring subtyping (on N dimensions); untyped closures which can operate on types; and likely some other painpoints. And it's not clear how they could make the system unsafe as apart from being used to define recursive types are simply specialized versions of preexisting types.
 
 \subsubsection{Functions}
 Really the only reason I opted for the function overloading system instead of normal branching in the original language was in order to make it easier to extend the language.
-Function overloading seems like it would be needlessly painful to formalize and doesn't contribute to our proof of soundness any more than branching via a ternary.
+Function overloading seems like it would be needlessly painful to formalize and doesn't contribute to our proof of soundness any more than branching via a ternary. As the case for functions having potentially no possible branch results in a type error in the complete language and this is simplified by having an else clause.
+
+\section{Syntax}
+Taking the ideas from the above rant into account we arrive at something along these lines
+\[
+\begin{array}{r l}
+    \tau \bnfdef & \kwInt \bnfalt \kwLong \bnfalt \kwFloat \bnfalt \kwDouble \bnfalt 
+        (\tau^*) \bnfalt \kwUnit \bnfalt \kwVoid \bnfalt \tau_1~ \tau_2~ + 
+        \bnfalt ~ \kwArrow{\tau_1} {\tau_2} \bnfalt \kwType{e}\\
+        
+    \tau^* \bnfdef & \varepsilon \bnfalt \tau^* ~ \tau \bnfalt \kwunpack{\tau}\\
+
+    e \bnfdef & e~e~+ \bnfalt ~e~e~\times \bnfalt ~ \kwtern{e}{e}{e} 
+        \bnfalt e~e~== \bnfalt ~ \tau~ \tau~ ==
+        \bnfalt ~ ( e^* )
+        \bnfalt \kwmacro{\tau^*}{S} \bnfalt \kwfix{e}{\tau}
+        \bnfalt \kwid{x} \bnfalt \kwunesc{x}\\
+
+    e^* \bnfdef & \varepsilon \bnfalt e^* ~ e \bnfalt \kwunpack{e}\\
+        
+    S \bnfdef & S~ S \bnfalt e~ \kweid{x} = \bnfalt ~e
+
+\end{array}
+\]
+
+Notes
+\begin{itemize}
+    \item A syntactic fixed point combinator was chosen instead of $\kwrec{\tau^*}{\tau^*}{e^*}$
+    \item notice that unpack can have any non-negative number of output values depending on the given input
+    \item $\kwunpack{e}$ and $\kwunpack{\tau}$ can give 0 or more outputs depending on the input tuple
+\end{itemize}
 
 \section{Proposed Work}
 \subsection{The Formalization}
@@ -191,7 +225,7 @@ Using big step semantics most of these aren't too scary. Just need to sit down a
 Proving theorems of Progress and Preservation should sufficiently prove a baseline of safety.
 
 \subsection{Findings, Resolution?, Conclusions}
-It's entirely possible that we could encounter problems with the language design, although pretty unlikely since we're even requiring type signatures on lambdas.
+It's entirely possible that we could encounter problems with the language design, although pretty unlikely since we're even requiring type signatures on closures.
 
 \section{Plan Distribution of Work}
 "Mostly" is used to indicate any >50\% but likely not independent
