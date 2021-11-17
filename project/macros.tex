@@ -1,0 +1,32 @@
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+%% Inference rules
+%Inference rule with a title
+\newcommand{\Rule}[4][]{\ensuremath{\inferrule*[right={(#2)},#1]{#3}{#4}}}
+%Inference rule with no title
+\newcommand{\RuleNoLabel}[3][]{\ensuremath{\inferrule*[#1]{#2}{#3}}}
+
+%% BNF
+\newcommand{\bnfdef}{\mathop{::=}}
+\newcommand{\bnfalt}{\mathbin{|}}
+
+%% Syntax
+\newcommand{\kw}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\kwUnit}{\kw{Unit}}
+\newcommand{\kwVoid}{\kw{Void}}
+\newcommand{\kwArrow}[2]{#1 ~ #2 ~ \kw{Arrow}}
+\newcommand{\kwInt}{\kw{I32}}
+\newcommand{\kwLong}{\kw{I64}}
+\newcommand{\kwFloat}{\kw{F32}}
+\newcommand{\kwDouble}{\kw{F64}}
+\newcommand{\kwType}[1]{#1 ~ \kw{type}}
+\newcommand{\kwUnion}[2]{#1 ~ #2 ~ \kw{+}}
+\newcommand{\kwunpack}[1]{#1 ~ \kw{unpack}}
+\newcommand{\kwtern}[3]{#1 ~ #2 ~ #3 ~ \kw{tern}}
+\newcommand{\kweid}[1]{\texttt{\$#1}}
+\newcommand{\kwmacro}[2]{\texttt{((} #1 \texttt{):} ~ #2 ~ \texttt{)}}
+\newcommand{\kwrec}[3]{\texttt{((} #1 \texttt{)(} #2 \texttt{)rec:} ~ #3 ~ \texttt{)}}
+\newcommand{\kwunesc}[1]{\kweid{#1}~\kw{\thicksim}}
+\newcommand{\kwfix}[2]{#1 ~ #2 ~ \kw{fix}}
+\newcommand{\kwid}[1]{\texttt{#1}}
