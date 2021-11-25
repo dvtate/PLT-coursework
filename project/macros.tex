@@ -23,10 +23,22 @@
 \newcommand{\kwType}[1]{#1 ~ \kw{type}}
 \newcommand{\kwUnion}[2]{#1 ~ #2 ~ \kw{+}}
 \newcommand{\kwunpack}[1]{#1 ~ \kw{unpack}}
-\newcommand{\kwtern}[3]{#1 ~ #2 ~ #3 ~ \kw{tern}}
+\newcommand{\kwtern}[3]{#1 ~ #2 ~ #3 ~ \kw{select}}
 \newcommand{\kweid}[1]{\texttt{\$#1}}
 \newcommand{\kwmacro}[2]{\texttt{((} #1 \texttt{):} ~ #2 ~ \texttt{)}}
 \newcommand{\kwrec}[3]{\texttt{((} #1 \texttt{)(} #2 \texttt{)rec:} ~ #3 ~ \texttt{)}}
 \newcommand{\kwunesc}[1]{\kweid{#1}~\kw{\thicksim}}
 \newcommand{\kwfix}[2]{#1 ~ #2 ~ \kw{fix}}
 \newcommand{\kwid}[1]{\texttt{#1}}
+\newcommand{\kwnumlit}[2]{\ensuremath{\overline{#1}_#2}}
+
+%% Judgments
+\newcommand{\ctx}{\ensuremath{\Gamma}}
+\newcommand{\val}{\ensuremath{~\mathsf{val}}}
+\newcommand{\step}{\ensuremath{\mapsto}}
+\newcommand{\typed}[3]{\ensuremath{#1 \vdash #2 : #3}}
+\newcommand{\etyped}[2]{\ensuremath{#1 : #2}}
+\newcommand{\sub}[3]{\ensuremath{[#1/#2]#3}}
+\newcommand{\fv}[1]{\ensuremath{\mathsf{FV}(#1)}}
+\newcommand{\tctx}{\ensuremath{\Delta}}
+\newcommand{\ftyped}[4]{\ensuremath{#1; #2 \vdash #3 : #4}}
