@@ -1,0 +1,290 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with`a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath, amsthm, verbatim, enumerate, xcolor, mathpartir}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\input{macros}
+
+\title{Verifying a Postfix Language \\
+    \large CS595 Final Project Proposal}
+\author{Dustin Van Tate Testa and Andrew Neth}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+A formalization and some proofs of soundness is given to a subset of \href{https://github.com/dvtate/postfix-haskell}{a functional, postfix language}.
+\end{abstract}
+
+\section{Motivation}
+WebAssembly is a typed, stack-machine based assembly language which is wildely supported across all major browsers. A number of new languages have come about with the goal of providing better support for the platform. Additionally it has proven the utility of typed stack-machines as a reasonably safe way to write programs.
+
+There appears to be little research into stack-based, functional languages (likely due to these languages not being common), thus more exploration on the topic could likely produce some value.
+
+The language this paper would be focused on is currently being used to power \href{https://ridder.xyz/game}{some insignificant demos}, but maybe in some distant future it will end up as the backend for a visual programming tool or some other application where guarantees of safety which could be produced here would be very important.
+
+\section{Preliminary Work - The Language}
+This section describes some of the key features of the original language. It is included only to show that the subset is a good representation of the original language and thus can be skipped.
+
+\subsection{Syntax}
+\begin{itemize}
+    \item \textbf{Primitive Literals:} The language supports numeric and string literals although in the paper we will likely only cover numbers.
+
+    \item \textbf{closures:} closures aka macros are enclosed within \texttt{(: ... )} and can have type annotations, for example \texttt{((I32 I32) (I32) rec: ... )}.
+
+    \item \textbf{Tuples:} Tuples are enclosed within parenthesis. There is no reason to include separators like commas.
+
+    \item \textbf{Identifiers:} there are two types of identifiers, escaped identifiers which start with \texttt{\$} are generally used for assignment and unescaped identifiers which are used for to invoke the value to which the identifier refers.
+    
+    In the language, identifiers can reference both typed and untyped values, but likely will be limited to typed values in the paper.
+
+    \item \textbf{Functions:} function overloading is the only supported form of branching in the language. The syntax for the \texttt{fun} operator is as follows. 
+
+    \texttt{(($..._1$)($..._2$ I32): Condition ) (: Action ) \$Identifier fun}.
+
+    In the final paper this will likely get replaced with a ternary.
+
+    \item \textbf{Other Operators:} Although the majority of primitive operators are defined in the standard library, the compiler actually has a few builtins as well. Athough these are very important to actually using the language they aren't worthy of listing out in their entirety here. Some examples include: \texttt{require}, \texttt{use}, \texttt{import}, \texttt{export}, \texttt{asm}, \texttt{namespace}, \texttt{type}, \texttt{unpack}, \texttt{class}, \texttt{=}, \texttt{|}, \texttt{@}, \texttt{\~}, \texttt{==}, \texttt{make}
+\end{itemize}
+    
+    Combining these concepts we can make the following program.
+    
+    \begin{verbatim}
+    # Import basic math and logic
+    "stdlib/prelude.phs" require use
+
+    # Define a recursive factorial closure
+    ((I32)(I32) rec:
+        $n =
+        (: 1 ) (: 1 ) $branch fun
+        (: n 1 > ) (: n 1 - fac n * ) $branch fun
+        branch
+    ) $fac =
+    
+    # Export factorial to the host environment
+    (I32) (: fac ) "factorial" export
+    \end{verbatim}
+    
+    
+\subsection{Preliminary Work - Type System}
+The language currently features an incomplete type system (with some compile-time-only values not fitting into the type system). However for the paper we will simplify it to exclude these values (notably namespaces, string literals, etc.) as they don't do anything interesting.
+
+\begin{itemize}
+    \item \textbf{Primitives:} Types supported by WebAssembly: \texttt{I32 I64 F32 F64}
+    \item \textbf{Tuples:} Types which represent the concept of adjacent values on the stack. And thus actually represent multiple values when compiled.
+    \begin{itemize}
+        \item \textbf{Relevant operators:} \texttt{pack unpack}.
+        \item \textbf{Example:} \texttt{(F32 F32 F32) \$FloatVec3 =}.
+    \end{itemize}
+
+    \item \textbf{Unions:} Created using the \texttt{|} operator, either of it's two operands can satisfy it. At present, all union types must be resolved at compile time (ie - unions can exist as types but not values), but this should be resolved once the garbage collector is finished.
+
+    \item \textbf{Unit \& Void}: \texttt{Unit} is the type of the empty tuple and \texttt{Void} does not typecheck.
+
+    \item \textbf{\texttt{Any}}: matches with any given type/value. Useful for pattern matching.
+
+    \item \textbf{\texttt{Arrow} Types}: the \texttt{Arrow} operator is used for macro types. 
+    Example: \texttt{(F32 F32) (F32) Arrow \$BinaryOperator =}
+
+    \item \textbf{Classes:} A similar concept in other languages would likely be 'traits', adding a class to a type gives it functionality designated by that class. Thus we can define \texttt{I32 class \$Color =} and then use bitwise operators in order to make the \texttt{Color} class represent a 32bit packed RGBA value. In addition to there are a number of more advanced ways to use the class
+
+    \begin{itemize}
+        \item \textbf{Instantiating:} the \texttt{make} operator is used to add a class to a value. So for the RGBA class we can do \texttt{0xff00ff80 Color make \$half\_magenta =}
+
+        \item \textbf{Subclasses:} We can make a class of our color class to add new functionality, for example \texttt{Color class \$RenderEngineColor =}
+
+        \item \textbf{Parametric Classes:} In addition to taking types as arguments, the class operator can take a macro, this allows one to describe more complex types. One such usage is to define type operators.
+
+        \texttt{(: \$T = (T T T) ) class \$Vec3 =}\\
+        \texttt{(1 2 3) I32 Vec3 make \$pos =}
+
+        Note that here \texttt{class} is technically optional and the following would be the same but less strict.
+
+        \texttt{(: \$T = (T T T) ) \$Vec3 =}\\
+        \texttt{(1 2 3) \$pos =}\\
+        so that \texttt{pos type I32 Vec3 == :data} gives 1
+
+        In the paper we will avoid ambiguity likely take the approach of adding 'type macros' with a brackets syntax instead.
+
+        \item \textbf{Recursive Classes:} By marking the macro in the class as recursive it's only accessed as a reference to an object stored on the heap. This allows the programmer to define recursive types. Will be added once GC is stable.
+
+        \texttt{(rec: \$T = (T List T) Unit | ) class \$List =}\\
+        \texttt{( 1 ( 2 () I32 List make ) I32 List make ) I32 List make}
+    \end{itemize}
+\end{itemize}
+
+\section{Prelimnary work - The Subset}
+Here we describe at a high level the subset of the language to formalize.
+
+\subsection{Branching}
+As mentioned before a ternary operator would be a reasonable subset of branching via function overloading. The tern operator is defined as an operator which 
+
+\begin{verbatim}
+# Tern takes an I32 and two values of the same type
+# and gives one of those two values
+$tern ~ :type # :type - (I32 $A $A) ($A) Arrow
+
+# As it is a subset we can define it in terms of functions
+((I32 Any Any): type swap type == ) (: ( $c $a $b ) = b ) $tern fun
+((I32 Any Any): type swap type == && ) (: ( $c $a $b ) = a ) $tern fun
+\end{verbatim}
+
+\subsection{closures}
+Via the same syntax already defined
+
+\subsection{Recursion}
+Need to think about how best to do this in a formalization but there was a lot of time that had to go into making type inference work for recursive functions (implementation + 3 pages of notes).
+
+\subsection{Tuples}
+N-ary tuples represent one of the more problematic parts of the language, notably \texttt{unpack} being the only operator with a type signature dependant on the type of it's input, additionally I have no clue how to define an arrow type with a specified but non-constant number of return values. In order to avoid expanding the scope of this assignment we may replace the \texttt{unpack} operator with a set of two operators with similar functionality.
+
+\subsection{Unions}
+Unions should be an easy addition.
+
+\begin{verbatim}
+    (()(I32 F32 |): 12 ) $value =
+    value type I32 == 1 0 tern $value_is_int =
+\end{verbatim}
+
+\subsection{Identifiers}
+Although the system for identifiers is a bit different from most languages we've covered, it's not too strange.
+
+\subsection{Types}
+Although types, which are treated as untyped stack values, aren't pretty we could take the approach of having a second stack (for operations on types) and second store (for type variables), instead of the implementation's approach. Or we can have a type judgement in addition to a value judgement. 
+
+\subsection{Operators, Keywords and Constants}
+So in summary our builtin operators would be: 
+\begin{itemize}
+    \item \texttt{+} - numeric add
+    \item \texttt{*} - numeric mul
+    \item \texttt{if-then-else} - ternary operator
+    \item \texttt{unpack} - destruct tuple (an attempt will be made)
+    \item \texttt{\~} - Extract value from an escaped identifier without invoking it (less important for safety but useful for defining additional operators using these as base)
+    \item \texttt{=} - the expression \texttt{e \$x = ...} is equivalent to \texttt{let x = e in ...}. But note that there are no 'bound variables' in this language.
+    \item \texttt{type} - get type of argument (equivalent to \texttt{type()} in python
+    \item \texttt{==} - current plan is to have an ambiguous == operator which accepts either 2 types or 2 equivalently typed values like in the language
+    \item \texttt{|} - used to form type unions
+    \item \texttt{Arrow} - closure types
+    \item \texttt{Unit} - keyword to distinguish from the empty tuple ()
+    \item \texttt{Void} - used due to lack of syntax for empty union
+\end{itemize}
+
+\subsection{Notably Not Included}
+
+\subsubsection{Classes}
+As much as we would like to include classes (notably recursive classes), it would likely add excess complexity, requiring subtyping (on N dimensions); untyped closures which can operate on types; and likely some other painpoints. And it's not clear how they could make the system unsafe as apart from being used to define recursive types are simply specialized versions of preexisting types.
+
+\subsubsection{Functions}
+Really the only reason I opted for the function overloading system instead of normal branching in the original language was in order to make it easier to extend the language.
+Function overloading seems like it would be needlessly painful to formalize and doesn't contribute to our proof of soundness any more than branching via a ternary. As the case for functions having potentially no possible branch results in a type error in the complete language and this is simplified by having an else clause.
+
+\section{Syntax}
+Taking the ideas from the above rant into account we arrive at something along these lines
+\[
+\begin{array}{r l}
+    \tau \bnfdef & \kwInt \bnfalt \kwLong \bnfalt \kwFloat \bnfalt \kwDouble \bnfalt 
+        (\tau^*) \bnfalt \kwUnit \bnfalt \kwVoid \bnfalt \tau_1~ \tau_2~ \texttt{|} 
+        \bnfalt ~ \kwArrow{\tau_1} {\tau_2} \bnfalt \kwType{e}\\
+        
+    \tau^* \bnfdef & \varepsilon \bnfalt \tau^* ~ \tau \bnfalt \kwunpack{\tau}\\
+
+    e \bnfdef & e~e~+ \bnfalt ~e~e~\times \bnfalt ~ \kwtern{e}{e}{e} 
+        \bnfalt e~e~== \bnfalt ~ \tau~ \tau~ ==
+        \bnfalt ~ ( e^* )
+        \bnfalt \kwmacro{\tau^*}{S} \bnfalt \kwfix{e}{\tau}
+        \bnfalt \kwid{x} \bnfalt \kwunesc{x}\\
+
+    e^* \bnfdef & \varepsilon \bnfalt e^* ~ e \bnfalt \kwunpack{e}\\
+        
+    S \bnfdef & \varepsilon \bnfalt S~ S \bnfalt e~ \kweid{x} = \bnfalt ~e
+
+\end{array}
+\]
+
+Notes
+\begin{itemize}
+    \item A syntactic fixed point combinator was chosen instead of $\kwrec{\tau^*}{\tau^*}{e^*}$
+    \item notice that unpack can have any non-negative number of output values depending on the given input
+    \item $\kwunpack{e}$ and $\kwunpack{\tau}$ can give 0 or more outputs depending on the input tuple
+\end{itemize}
+
+\section{Semantics}
+We've expanded the macro value syntax to also capture lexically scoped variables. These are represented as with a brackets syntax as shown: $(( \tau^* )[ x \step (), y \step 123 ]: ... )$.
+
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}
+        \Rule{Num Lits}
+             {\forall ~ T \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
+             {\kwnumlit{n}{T} \val}
+        \and
+        
+        % Derivation of e* -> e*'
+        \Rule{$e^* \step~ e^{*\prime}$ - Part 1}
+            {e_1 \step e_1'}
+            {e_1 ~ ... ~ e_n \step e_1' ~ ... ~ e_n}
+        \and
+        \Rule{$e^* \step~ e^{*\prime}$ - Part 2}
+            {e_1 \step e_1'
+                \\v_i \val ~ \forall v_i \in v*}
+            {v* ~ e_1 ~ ... ~ e_n \step v* ~ e_1' ~ ... ~ e_n}
+        \and
+        
+        % Tuple literals evaluation
+        \Rule{Tuple Lits - 1}
+            {e^* \step e^{*\prime}}
+            {( e^* ) \step ( e^{*\prime} )}
+        \Rule{Tuple Lits - 2}
+            {v_i \val ~ \forall v_i \in v*}
+            {(v*) \val}
+        \and 
+        
+        % unpack operator
+        \Rule{Tuple Value Unpack - 1}
+            {v_i \val ~ \forall i \in [1, n]}
+            {\kwunpack{(v_1 ... v_n)} \step v_1 ... v_n}
+        \Rule{Tuple Value Unpack - 2}
+            {\strut}
+            {\kwunpack{()} \step \varepsilon}
+        \and
+        \Rule{Tuple Type Unpack - 1}
+            {\strut}
+            {\kwunpack{(\tau_1 ... \tau_n)} \step \tau_1 ... \tau_n}
+        \Rule{Tuple Type Unpack - 2}
+            {\strut}
+            {\kwunpack{\kwUnit} \step \varepsilon}
+
+        % math
+        \Rule{Numeric Sum}
+            {v_1 \val \\ v_2 \val \\ v_3 = v_1 + v_2}
+            {v_1~ v_2~ + \step v_3}
+        \Rule{Numeric Product}
+            {v_1 \val \\ v_2 \val \\ v_3 = v_1 * v_2}
+            {v_1~ v_2~ \times \step v_3}
+        \and
+
+        % ternary
+        \Rule{Ternary 1}
+            {v_1 \val \\ v_2 \val}
+            {\kwtern{\kwnumlit{0}{\kwInt}}{v_1}{v_2} \step v_2}
+        \Rule{Ternary 2}
+            {v_1 \val \\ v_2 \val \\ n \neq 0}
+            {\kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2} \step v_1}
+        
+        
+        
+
+    \end{mathpar}
+}
+
+\end{document}
