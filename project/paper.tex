@@ -32,7 +32,7 @@ There appears to be little research into stack-based, functional languages (like
 
 The language this paper would be focused on is currently being used to power \href{https://ridder.xyz/game}{some insignificant demos}, but maybe in some distant future it will end up as the backend for a visual programming tool or some other application where guarantees of safety which could be produced here would be very important.
 
-\section{Preliminary Work - The Language}
+\section{The Language}
 This section describes some of the key features of the original language. It is included only to show that the subset is a good representation of the original language and thus can be skipped.
 
 \subsection{Syntax}
@@ -122,7 +122,7 @@ The language currently features an incomplete type system (with some compile-tim
     \end{itemize}
 \end{itemize}
 
-\section{Prelimnary work - The Subset}
+\section{The Subset}
 Here we describe at a high level the subset of the language to formalize.
 
 \subsection{Branching}
@@ -201,90 +201,186 @@ Taking the ideas from the above rant into account we arrive at something along t
         \bnfalt e~e~== \bnfalt ~ \tau~ \tau~ ==
         \bnfalt ~ ( e^* )
         \bnfalt \kwmacro{\tau^*}{S} \bnfalt \kwfix{e}{\tau}
-        \bnfalt \kwid{x} \bnfalt \kwunesc{x}\\
+        \bnfalt \kwid{x} \bnfalt e ~ \textbf{@} 
+        \bnfalt S~ S \bnfalt e~ \kweid{x} = \\
 
     e^* \bnfdef & \varepsilon \bnfalt e^* ~ e \bnfalt \kwunpack{e}\\
-        
-    S \bnfdef & \varepsilon \bnfalt S~ S \bnfalt e~ \kweid{x} = \bnfalt ~e
 
 \end{array}
 \]
 
 Notes
 \begin{itemize}
-    \item A syntactic fixed point combinator was chosen instead of $\kwrec{\tau^*}{\tau^*}{e^*}$
+    \item A syntactic fixed point combinator was chosen instead of $\kwrec{\tau^*}{\tau^*}{e^*}$. It's possible that one could be implemented in the language itself.
     \item notice that unpack can have any non-negative number of output values depending on the given input
     \item $\kwunpack{e}$ and $\kwunpack{\tau}$ can give 0 or more outputs depending on the input tuple
 \end{itemize}
 
 \section{Semantics}
-We've expanded the macro value syntax to also capture lexically scoped variables. These are represented as with a brackets syntax as shown: $(( \tau^* )[ x \step (), y \step 123 ]: ... )$.
 
+% TODO we should split this into subsections
+\subsection{Value Judgements}
+Types come in the form of values and expressions just like other language features.
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
-        \Rule{Num Lits}
-             {\forall ~ T \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
-             {\kwnumlit{n}{T} \val}
+        % number literals
+        \Rule{V-1}
+             {\forall ~ \tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
+             {\kwnumlit{n}{\tau} \val}
         \and
         
+        % type values
+        \Rule{V-2}{\strut}{\kwInt \val} \and
+        \Rule{V-3}{\strut}{\kwLong \val} \and
+        \Rule{V-4}{\strut}{\kwFloat \val} \and
+        \Rule{V-5}{\strut}{\kwDouble \val} \and
+        \Rule{V-6}{\tau_1 \val \\ \tau_2 \val}{\tau_1 \tau_2 \texttt{|} \val} \and
+        \Rule{V-7}{\tau_1 \val \\ \tau_2 \val}{\kwArrow{\tau_1}{\tau_2} \val} \and
+        % fixed point combinator
+        \Rule{Fixed Point}{e \val \\ \tau \val}{\kwfix{e}{\tau} \val}
+    \end{mathpar}  
+}
+
+\subsection{Step Judgement}
+Expressions are evaluated from left to right until everything is a value
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}
         % Derivation of e* -> e*'
-        \Rule{$e^* \step~ e^{*\prime}$ - Part 1}
+        \Rule{STEP-1}
             {e_1 \step e_1'}
             {e_1 ~ ... ~ e_n \step e_1' ~ ... ~ e_n}
         \and
-        \Rule{$e^* \step~ e^{*\prime}$ - Part 2}
+        \Rule{STEP-2}
             {e_1 \step e_1'
                 \\v_i \val ~ \forall v_i \in v*}
             {v* ~ e_1 ~ ... ~ e_n \step v* ~ e_1' ~ ... ~ e_n}
         \and
+    \end{mathpar}  
+}
+
+\subsection{Macros, Identifiers and Scoping}
+The store, $\sigma$, consists of a list of lists of mappings from identifiers to values. Notice the addition of an auxiliary $\kw{end\_scope}$ operator which removes the current scope. A macro literal steps to a macro value by first stepping it's input types until they're all values before substituting all of the values in the store within it's body (forming a closure). Calling a macro value pushes a new empty mappings list onto the store, places the macro's expressions and a $\kw{end\_scope}$ operator onto the stack, enabling local identifiers.
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}    
+        % Closures capture lexically scoped variables via substitution 
+        \Rule{LET-1}
+            {v \val
+                \\ \sigma = [ [...], ... [ x_1 \step v_1 ... x_n \step v_n] ]
+                \\ \sigma' = [ [...], ... [ x_1 \step v_1 ... x_n \step v_n, x_{n+1} \step v_{n+1}] ]}
+            {\sigma; v ~ \kweid{x} = \step \sigma'; \varepsilon}
+
+        \Rule{MACRO-1}
+            {\tau^* \step \tau^{\prime*}}
+            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^{\prime*}}{e^*}}
+            
+        \Rule{MACRO-2}
+            {\uplus^{|\sigma|}_{i = 1} \sigma(i) = [x_1 \step v_1 ~ ... ~ x_n \step v_n]
+                \\ \tau_i \val~ \forall~ \tau_i \in \tau*}
+            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^*}{[v_1/x_1]...[v_n/x_n] e^*} \val}
+        
+        \Rule{CALL-1}
+            {\sigma' = \sigma \cup [~] }
+            {\sigma; \kwmacro{\tau^*}{e^*} \textbf{@} \step \sigma'; e^* \kw{end\_scope}}
+            
+        \Rule{CALL-2}
+            {\sigma' = \text{$\sigma$ but with the last list of mappings removed}}
+            {\sigma; \kw{end\_scope} \step \sigma'; \varepsilon} 
+    \end{mathpar}  
+}
+
+\subsection{Others}
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}    
         
         % Tuple literals evaluation
-        \Rule{Tuple Lits - 1}
+        \Rule{TUPLES-1}
             {e^* \step e^{*\prime}}
             {( e^* ) \step ( e^{*\prime} )}
-        \Rule{Tuple Lits - 2}
+        \Rule{TUPLES-2}
             {v_i \val ~ \forall v_i \in v*}
             {(v*) \val}
         \and 
         
         % unpack operator
-        \Rule{Tuple Value Unpack - 1}
-            {v_i \val ~ \forall i \in [1, n]}
+        \Rule{TUPLES-3}
+            {v_i \val ~ \forall~ i \in [1, n]}
             {\kwunpack{(v_1 ... v_n)} \step v_1 ... v_n}
-        \Rule{Tuple Value Unpack - 2}
+        \Rule{TUPLES-4}
             {\strut}
             {\kwunpack{()} \step \varepsilon}
         \and
-        \Rule{Tuple Type Unpack - 1}
-            {\strut}
+        \Rule{TUPLES-5}
+            {\tau_i \val ~ \forall~ i \in [1, n]}
             {\kwunpack{(\tau_1 ... \tau_n)} \step \tau_1 ... \tau_n}
-        \Rule{Tuple Type Unpack - 2}
+        \Rule{TUPLES-6}
             {\strut}
             {\kwunpack{\kwUnit} \step \varepsilon}
+        \and
 
         % math
-        \Rule{Numeric Sum}
+        \Rule{ADD}
             {v_1 \val \\ v_2 \val \\ v_3 = v_1 + v_2}
             {v_1~ v_2~ + \step v_3}
-        \Rule{Numeric Product}
+        \Rule{MUL}
             {v_1 \val \\ v_2 \val \\ v_3 = v_1 * v_2}
             {v_1~ v_2~ \times \step v_3}
         \and
 
         % ternary
-        \Rule{Ternary 1}
+        \Rule{TERN-1}
             {v_1 \val \\ v_2 \val}
             {\kwtern{\kwnumlit{0}{\kwInt}}{v_1}{v_2} \step v_2}
-        \Rule{Ternary 2}
+        \Rule{TERN-2}
             {v_1 \val \\ v_2 \val \\ n \neq 0}
             {\kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2} \step v_1}
-        
-        
-        
+        \and
 
+        % typeof operator
+        \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \step \tau} \and
+        % Move this to type rules
+        % \Rule{Type Operator}
+        %     {\tau^* = \tau_1 ~...~ \tau_n \\
+        %      v^* = \etyped{v_1}{\tau_1} ~...~ \etyped{v_1}{\tau_1} \\
+        %      m = \kwmacro{\tau^*}{e^*} \\
+        %      m \val }
+        %     {\kwType{m} \step \kwArrow{(\tau^*)}{\kwType{(v^*~ m~ \textbf{@})}}}
     \end{mathpar}
 }
 
+\section{Typing}
+
+\subsection{Math and Logic}
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}
+        \Rule{T-1}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwInt}}{\kwInt}}
+        \and \Rule{T-2}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwLong}}{\kwLong}}
+        \and \Rule{T-3}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwFloat}}{\kwFloat}}
+        \and \Rule{T-4}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwDouble}}{\kwDouble}}
+        \and \Rule{T-5}
+            {\typed{\ctx}{e_1}{\tau} 
+                \\ \typed{\ctx}{e_2}{\tau} 
+                \\ \tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}}
+            {\typed{\ctx}{e_1~ e_2~ +}{\tau}}
+        \and \Rule{T-6}
+            {\typed{\ctx}{e_1}{\tau} 
+                \\ \typed{\ctx}{e_2}{\tau} 
+                \\ \tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}}
+            {\typed{\ctx}{e_1~ e_2~ \times}{\tau}}
+        \and \Rule{T-7}
+            {\typed{\ctx}{e_1}{\kwInt}
+                \\ \typed{\ctx}{e_2}{\tau}
+                \\ \typed{\ctx}{e_3}{\tau}}
+            {\typed{\ctx}{\kwtern{e_1}{e_2}{e_3}}{\tau}}
+    \end{mathpar}
+}
 \end{document}
