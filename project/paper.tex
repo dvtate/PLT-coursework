@@ -201,7 +201,6 @@ Taking the ideas from the above rant into account we arrive at something along t
     |    $\kwDouble$
     \alt $(\tau^*)$
     |    $\kwUnit$
-    |    $\kwVoid$
     |    $\tau_1~ \tau_2~ \texttt{|}$
     |    $\kwArrow{\tau_1} {\tau_2}$
     |    $\kwType{e}$
@@ -214,11 +213,11 @@ Taking the ideas from the above rant into account we arrive at something along t
     |    $e~ e~ ==$
     |    $\tau~ \tau~ ==$
     \alt $(e^*)$
-    |    $\kwmacro{\tau^*}{S}$
+    |    $\kwmacro{\tau^*}{e^*}$
     |    $\kwfix{e}{\tau}$
     \alt $\kwid{x}$
+    |    $\kwid{T}$
     |    $e~ \textbf{@} $
-    |    $S~ S$
     |    $e~ \kweid{x} =$
 
     <$e^*$> ::= $\varepsilon$ | $e^* ~ e$ | $\kwunpack{e}$
@@ -232,10 +231,22 @@ Notes
 \end{itemize}
 
 \section{Semantics}
+\subsection{Notation}
+To annotate stack values we used the notation of two values being written next to each other, as they would be written in the language itself. The values at the bottom of the stack (furthest to the left) are often irrelevant, and thus can be omitted with this notation. The superscript * notation (ie - $e^*$) is used to annotate 0 or more of the preceding. This is explicitly defined in the syntax but implicitly expanded in the semantics.
 
-% TODO we should split this into subsections
 \subsection{Value Judgements}
-Types come in the form of values and expressions just like other language features.
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}
+        
+        % fixed point combinator
+        \Rule{Fixed Point}{e \val \\ \tau \prim}{\kwfix{e}{\tau} \val}
+    \end{mathpar}
+}
+
+\subsection{Value and Step Judgement}
+Expressions are evaluated from left to right until everything is a value
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
@@ -246,24 +257,15 @@ Types come in the form of values and expressions just like other language featur
              {\kwnumlit{n}{\tau} \val}
         \and
         
-        % type values
-        \Rule{V-2}{\strut}{\kwInt \val} \and
-        \Rule{V-3}{\strut}{\kwLong \val} \and
-        \Rule{V-4}{\strut}{\kwFloat \val} \and
-        \Rule{V-5}{\strut}{\kwDouble \val} \and
-        \Rule{V-6}{\tau_1 \val \\ \tau_2 \val}{\tau_1 \tau_2 \texttt{|} \val} \and
-        \Rule{V-7}{\tau_1 \val \\ \tau_2 \val}{\kwArrow{\tau_1}{\tau_2} \val} \and
-        % fixed point combinator
-        \Rule{Fixed Point}{e \val \\ \tau \val}{\kwfix{e}{\tau} \val}
-    \end{mathpar}  
-}
-
-\subsection{Step Judgement}
-Expressions are evaluated from left to right until everything is a value
-{
-    \centering
-    \def \MathparLineskip {\lineskip=0.43cm}
-    \begin{mathpar}
+        % Tuple literals evaluation
+        \Rule{TUPLES-1}
+            {e^* \step e^{*\prime}}
+            {( e^* ) \step ( e^{*\prime} )}
+        \Rule{TUPLES-2}
+            {v_i \val ~ \forall v_i \in v^*}
+            {(v^*) \val}
+        \and
+        
         % Derivation of e* -> e*'
         \Rule{STEP-1}
             {e_1 \step e_1'}
@@ -271,8 +273,8 @@ Expressions are evaluated from left to right until everything is a value
         \and
         \Rule{STEP-2}
             {e_1 \step e_1'
-                \\v_i \val ~ \forall v_i \in v*}
-            {v* ~ e_1 ~ ... ~ e_n \step v* ~ e_1' ~ ... ~ e_n}
+                \\v_i \val ~ \forall~ v_i \in v^*}
+            {v^* ~ e_1 ~ ... ~ e_n \step v^* ~ e_1' ~ ... ~ e_n}
         \and
     \end{mathpar}  
 }
@@ -284,32 +286,29 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}    
         % Closures capture lexically scoped variables via substitution 
-        \Rule{LET-1}
+        \Rule{LET}
             {v \val
                 \\ \sigma = [ [...], ... [ x_1 \step v_1 ... x_n \step v_n] ]
                 \\ \sigma' = [ [...], ... [ x_1 \step v_1 ... x_n \step v_n, x_{n+1} \step v] ]}
             {\sigma; v ~ \kweid{x} = \step \sigma'; \varepsilon}
-
-        \and \Rule{MACRO-1}
-            {\tau^* \step \tau^{\prime*}}
-            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^{\prime*}}{e^*}}
             
+        \and \Rule{Identifier}
+            {[ ... ~ \kwid{x} \step v ~ ... ] \in \sigma}
+            {\sigma; \kwid{x} \step \sigma; v}
+
         \and \Rule{MACRO-2}
             {\uplus^{|\sigma|}_{i = 1} \sigma(i) = [x_1 \step v_1 ~ ... ~ x_n \step v_n]
-                \\ \tau_i \val~ \forall~ \tau_i \in \tau*}
+                \\ \tau_i \val~ \forall~ \tau_i \in \tau^*}
             {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^*}{[v_1/x_1]...[v_n/x_n] e^*} \val}
-        
+            
         \and \Rule{CALL-1}
             {\sigma' = \sigma \cup [~] }
             {\sigma; \kwmacro{\tau^*}{e^*} \textbf{@} \step \sigma'; e^* \kw{end\_scope}}
-            
+
         \and \Rule{CALL-2}
             {\sigma = [s_1,...s_n,s_{n+1}] \\ \sigma' = [s_1,...s_n]}
             {\sigma; \kw{end\_scope} \step \sigma'; \varepsilon}
 
-        \and \Rule{Identifier}
-            {[ ... ~ \kwid{x} \step v ~ ... ] \in \sigma}
-            {\sigma; \kwid{x} \step \sigma; v}
     \end{mathpar}  
 }
 
@@ -317,17 +316,8 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
-    \begin{mathpar}    
-        
-        % Tuple literals evaluation
-        \Rule{TUPLES-1}
-            {e^* \step e^{*\prime}}
-            {( e^* ) \step ( e^{*\prime} )}
-        \Rule{TUPLES-2}
-            {v_i \val ~ \forall v_i \in v*}
-            {(v*) \val}
-        \and 
-        
+    \begin{mathpar}
+
         % unpack operator
         \Rule{TUPLES-3}
             {v_i \val ~ \forall~ i \in [1, n]}
@@ -335,13 +325,6 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
         \Rule{TUPLES-4}
             {\strut}
             {\kwunpack{()} \step \varepsilon}
-        \and
-        \Rule{TUPLES-5}
-            {\tau_i \val ~ \forall~ i \in [1, n]}
-            {\kwunpack{(\tau_1 ... \tau_n)} \step \tau_1 ... \tau_n}
-        \Rule{TUPLES-6}
-            {\strut}
-            {\kwunpack{\kwUnit} \step \varepsilon}
         \and
 
         % math
@@ -361,16 +344,95 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
             {v_1 \val \\ v_2 \val \\ n \neq 0}
             {\kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2} \step v_1}
         \and
+    \end{mathpar}
+}
 
-        % typeof operator
-        \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \step \tau} \and
-        % Move this to type rules
-        % \Rule{Type Operator}
-        %     {\tau^* = \tau_1 ~...~ \tau_n \\
-        %      v^* = \etyped{v_1}{\tau_1} ~...~ \etyped{v_1}{\tau_1} \\
-        %      m = \kwmacro{\tau^*}{e^*} \\
-        %      m \val }
-        %     {\kwType{m} \step \kwArrow{(\tau^*)}{\kwType{(v^*~ m~ \textbf{@})}}}
+\section{Semantics for Types}
+Because there are operations involving types, we have to have a equivalents to $\val$ and $\step$ judgements for types. These are provided by $\prim$ and $\tstep$ respectively with $\prim$ loosely referring to "primitive" types.
+
+\subsection{Primitives}
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}
+        \Rule{P-I32}{\strut}{\kwInt \prim} \and
+        \Rule{P-I64}{\strut}{\kwLong \prim} \and
+        \Rule{P-F32}{\strut}{\kwFloat \prim} \and
+        \Rule{P-F64}{\strut}{\kwDouble \prim} \and
+        \Rule{P-sum}{\tau_1 \prim \\ \tau_2 \prim}{\tau_1 \tau_2 \texttt{|} \prim} \and
+        \Rule{P-Arrow}{\tau_1 \prim \\ \tau_2 \prim}{\kwArrow{\tau_1}{\tau_2} \prim} \and
+    \end{mathpar}  
+}
+
+\subsection{Step Judgement and Type operator}
+Expressions are evaluated from left to right until everything is a value
+{
+    \centering
+    \def \MathparLineskip {\lineskip=0.43cm}
+    \begin{mathpar}
+        % Derivation of e* -> e*'
+        \Rule{STEP-1}
+            {\tau_1 \tstep \tau_1'}
+            {\tau_1 ~ ... ~ \tau_n \tstep \tau_1' ~ ... ~ \tau_n}
+        \and
+        \Rule{STEP-2}
+            {\tau_1 \tstep \tau_1'
+                \\v_i \prim ~ \forall v_i \in v^*}
+            {\tau^* ~ \tau_1 ~ ... ~ \tau_n \tstep v^* ~ \tau_1' ~ ... ~ \tau_n}
+        \and
+        
+        \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \tstep \tau} 
+    \end{mathpar}  
+}
+
+\subsection{Type Identifiers}
+Type identifiers use the same store as used for values, however their identifiers are guaranteed to not conflict as type identifiers start with a capitol letter vs lower-case for value identifiers. Because we use the same store the step semantics for closures and scopes continue to work.
+{
+    \centering
+    \def \MathparLineskip{\lineskip=0.43cm}
+    \begin{mathpar}
+        \Rule{Type-Let}
+            {\tau \prim
+                \\ \sigma = [ [...], ... [ T_1 \tstep \tau_1 ... T_n \tstep \tau_n] ]
+                \\ \sigma' = [ [...], ... [ T_1 \tstep \tau_1 ... T_n \tstep \tau_n, T_{n+1} \tstep \tau] ]}
+            {\sigma; \tau ~ \kweid{T} = \tstep \sigma'; \varepsilon}
+    
+        \and \Rule{Type-Id}
+            {[ ... ~ \kwid{T} \tstep \tau ~ ... ] \in \sigma}
+            {\sigma; \kwid{T} \tstep \sigma; \tau}
+            
+        \and \Rule{MACRO-1}
+            {\tau^* \tstep \tau^{*\prime}}
+            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^{*\prime}}{e^*}}
+    \end{mathpar}
+}
+
+\subsection{Others}
+Notably the step
+{
+    \centering
+    \def \MathparLineskip{\lineskip=0.43cm}
+    \begin{mathpar}
+        % Tuple type literals evaluation
+        \Rule{TTUPLES-1}
+            {\tau^* \tstep \tau^{*\prime}}
+            {( \tau^* ) \tstep ( \tau^{*\prime} )}
+        \Rule{TTUPLES-2}
+            {\tau_i \prim ~ \forall \tau_i \in \tau^*}
+            {(\tau^*) \prim}
+        \and
+        
+        % unpack operator
+        \Rule{TTUPLES-3}
+            {\tau_i \prim ~ \forall~ i \in [1, n]}
+            {\kwunpack{(\tau_1 ... \tau_n)} \tstep \tau_1 ... \tau_n}
+        \Rule{TTUPLES-4}
+            {\strut}
+            {\kwunpack{\kwUnit} \tstep \varepsilon}
+        \and
+
+        % fixed point combinator
+        \Rule{Fixed Point}{e \val \\ \tau \prim}{\kwfix{e}{\tau} \val}
     \end{mathpar}
 }
 
@@ -381,7 +443,7 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
     \centering
     \begin{mathpar}
     \Rule{T-0}
-        {\tau \step \tau' \\ \typed{\ctx}{e}{\tau}}
+        {\typed{\ctx}{e}{\tau} \\ \tau \tstep \tau'}
         {\typed{\ctx}{e}{\tau'}}
     \end{mathpar}
 }
@@ -425,19 +487,62 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
         \and \Rule{Unpack}
             {\typed{\ctx}{(e^*)}{(\tau^*)}}
             {\typed{\ctx}{\kwunpack{(e^*)}}{\tau^*}}
-        % equivalent types?
-        % \and \Rule{Unpack types}
-        %     {\typed{\ctx}{e*}{\kwunpack{(\tau^*)}}}
-        %     {\typed{\ctx}{e*}{\tau*}}
     \end{mathpar}
 }
 
 \subsection{Macros}
+This is why we needed the step judgement :sweatsmile:
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
-
+        % Move this to type rules   
+        \Rule{Macro}
+            {\tau^* = \tau_1 ~...~ \tau_n \\
+             v^* = \etyped{v_1}{\tau_1} ~...~ \etyped{v_n}{\tau_n} \\
+             m = \kwmacro{\tau^*}{e^*} \\
+             m \val }
+            {\typed{\ctx}{m}{\kwArrow{(\tau^*)}{\kwType{(v^*~ m~ \textbf{@})}}}}
+        
+        \Rule{Call}
+            {\typed{\ctx}{e_1}{\kwArrow{\tau^*}{\tau^{*\prime}}}
+                \\ \typed{\ctx}{e^*}{\tau^*}}
+            {\typed{\ctx}{e^*~ e_1~ \textbf{@}}{\tau^{*\prime}}}
+        
+        \Rule{Identifier}
+            {\ctx(\kwid{x}) = \tau}
+            {\typed{\ctx}{\kwid{x}}{\tau}}
+        
     \end{mathpar}
 }
+
+\section{Proofs}
+\subsection{Theorem - Progress}
+If $\etyped{e^*}{\tau^*}$ then either $e^*\step e^{*\prime}$ or $e_i \val~ \forall~ e_i \in e^*$.
+\begin{proof}
+    By induction on the derivation of $\etyped{e^*}{\tau^*}$.
+    \begin{itemize}
+        \item (T-\{1,2,3,4\})
+            Then $e^* = e = \kwnumlit{n}{\tau}$, where $\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble \}$.
+            By (V-1), $\kwnumlit{n}{\tau} \val$, so $e^* \val$.
+        
+        \item (T-5)
+            Then $e^* = e = e_1~ e_2~ +$ and $\kwtyped{e_1}{\tau}$ and $\kwtyped{e_2}{\tau}$ for some $\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble \}$.
+            
+            By induction, $e_1 \step e_1'$ or $e_1 val$.
+            If $e_1 \step e_1'$, then by \Rulename{STEP-1}, $e \step e_1'~ e_2~ +$.
+            
+            If $e_1 \val$, then by induction, $e_2 \step e_2'$ or $e_2 val$.
+            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rulename{STEP-2}, $e \step e_1~ e_2'~ +$.
+            
+            If $e_1 \val$ and $e_2 \val$, then $e_1 = \kwnumlit{n_1}{\tau}, e_2 = \kwnumlit{n_2}{\tau}$, and by \Rulename{ADD}, $e+ \step \kwnumlit{n_1 + n_2}{\tau}$.
+    \end{itemize}
+\end{proof}
+
+\subsection{Theorem - Preservation}
+If $\typed{\ctx}{e^*}{\tau^*}$ and $e^* \step e^{*\prime}$ then $\typed{\ctx}{e^{*\prime}}{\tau^{*\prime}}$ where $\tau^{*\prime} \tstep^* \tau^*$
+\begin{proof}
+    
+\end{proof}
+
 \end{document}
