@@ -14,7 +14,7 @@
 %% Syntax
 \newcommand{\kw}[1]{\ensuremath{\mathsf{#1}}}
 \newcommand{\kwUnit}{\kw{Unit}}
-\newcommand{\kwVoid}{\kw{Void}}
+% \newcommand{\kwVoid}{\kw{Void}}
 \newcommand{\kwArrow}[2]{#1 ~ #2 ~ \kw{Arrow}}
 \newcommand{\kwInt}{\kw{I32}}
 \newcommand{\kwLong}{\kw{I64}}
@@ -31,6 +31,7 @@
 \newcommand{\kwfix}[2]{#1 ~ #2 ~ \kw{fix}}
 \newcommand{\kwid}[1]{\texttt{#1}}
 \newcommand{\kwnumlit}[2]{\ensuremath{\overline{#1}_#2}}
+\newcommand{\kwcall}[0]{\ensuremath{\textbf{@}}}
 
 %% Judgments
 \newcommand{\ctx}{\ensuremath{\Gamma}}
@@ -42,3 +43,8 @@
 \newcommand{\fv}[1]{\ensuremath{\mathsf{FV}(#1)}}
 \newcommand{\tctx}{\ensuremath{\Delta}}
 \newcommand{\ftyped}[4]{\ensuremath{#1; #2 \vdash #3 : #4}}
+\newcommand{\tstep}{\ensuremath{\rightarrowtail}}
+\newcommand{\prim}{\ensuremath{~\mathsf{prim}}}
+
+%% andrew's uncategorized stuff
+\newcommand{\Rulename}[1]{\textsc{(#1)}}
