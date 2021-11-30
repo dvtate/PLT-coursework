@@ -12,8 +12,6 @@
 \usepackage{amsmath, amsthm, verbatim, enumerate, xcolor, mathpartir}
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
-
-% ???
 \usepackage{syntax}
 
 \input{macros}
@@ -201,7 +199,7 @@ Taking the ideas from the above rant into account we arrive at something along t
     |    $\kwDouble$
     \alt $(\tau^*)$
     |    $\kwUnit$
-    |    $\tau_1~ \tau_2~ \texttt{|}$
+    % |    $\tau_1~ \tau_2~ \texttt{|}$
     |    $\kwArrow{\tau_1} {\tau_2}$
     |    $\kwType{e}$
         
@@ -222,11 +220,10 @@ Taking the ideas from the above rant into account we arrive at something along t
 
     <$e^*$> ::= $\varepsilon$ | $e^* ~ e$ | $\kwunpack{e}$
 \end{grammar}
-
 Notes
 \begin{itemize}
     \item A syntactic fixed point combinator was chosen instead of $\kwrec{\tau^*}{\tau^*}{e^*}$. It's possible that one could be implemented in the language itself.
-    \item notice that unpack can have any non-negative number of output values depending on the given input
+    \item Tuples and Tuple types are enclosed in parens
     \item $\kwunpack{e}$ and $\kwunpack{\tau}$ can give 0 or more outputs depending on the input tuple
 \end{itemize}
 
@@ -234,23 +231,19 @@ Notes
 \subsection{Notation}
 To annotate stack values we used the notation of two values being written next to each other, as they would be written in the language itself. The values at the bottom of the stack (furthest to the left) are often irrelevant, and thus can be omitted with this notation. The superscript * notation (ie - $e^*$) is used to annotate 0 or more of the preceding. This is explicitly defined in the syntax but implicitly expanded in the semantics.
 
-\subsection{Value Judgements}
-{
-    \centering
-    \def \MathparLineskip {\lineskip=0.43cm}
-    \begin{mathpar}
-        
-        % fixed point combinator
-        \Rule{Fixed Point}{e \val \\ \tau \prim}{\kwfix{e}{\tau} \val}
-    \end{mathpar}
-}
-
 \subsection{Value and Step Judgement}
-Expressions are evaluated from left to right until everything is a value
+The step judgement states that expressions are evaluated from left to right until everything is a value. Values are defined further as we go through.
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
+        % Derivation of e* -> e*'
+        \Rule{STEP}
+            {e_1 \step e_1'
+                \\v_i \val ~ \forall~ v_i \in v^*}
+            {v^* ~ e_1 ~ ... ~ e_n \step v^* ~ e_1' ~ ... ~ e_n}
+        \and
+
         % number literals
         \Rule{V-1}
              {\forall ~ \tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
@@ -264,17 +257,6 @@ Expressions are evaluated from left to right until everything is a value
         \Rule{TUPLES-2}
             {v_i \val ~ \forall v_i \in v^*}
             {(v^*) \val}
-        \and
-        
-        % Derivation of e* -> e*'
-        \Rule{STEP-1}
-            {e_1 \step e_1'}
-            {e_1 ~ ... ~ e_n \step e_1' ~ ... ~ e_n}
-        \and
-        \Rule{STEP-2}
-            {e_1 \step e_1'
-                \\v_i \val ~ \forall~ v_i \in v^*}
-            {v^* ~ e_1 ~ ... ~ e_n \step v^* ~ e_1' ~ ... ~ e_n}
         \and
     \end{mathpar}  
 }
@@ -313,6 +295,7 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
 }
 
 \subsection{Others}
+Notice the use of the \href{https://en.wikipedia.org/wiki/Kronecker_delta}{Kronecker Delta} to define the equals operator.
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
@@ -331,12 +314,18 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
         \Rule{ADD}
             {v_1 \val \\ v_2 \val \\ v_3 = v_1 + v_2}
             {v_1~ v_2~ + \step v_3}
+        \and
         \Rule{MUL}
             {v_1 \val \\ v_2 \val \\ v_3 = v_1 * v_2}
             {v_1~ v_2~ \times \step v_3}
         \and
+        
+        % Comparisons
+        \Rule{EQUIV}
+            {v_1 \val \\ v_2 \val}
+            {v_1~ v_2~ ==~ \step \kwnumlit{(\delta_{v_1 v_2})}{\kwInt}}
 
-        % ternary
+        % Ternary
         \Rule{TERN-1}
             {v_1 \val \\ v_2 \val}
             {\kwtern{\kwnumlit{0}{\kwInt}}{v_1}{v_2} \step v_2}
@@ -348,7 +337,7 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
 }
 
 \section{Semantics for Types}
-Because there are operations involving types, we have to have a equivalents to $\val$ and $\step$ judgements for types. These are provided by $\prim$ and $\tstep$ respectively with $\prim$ loosely referring to "primitive" types.
+Because there are operations involving types, we have to have a equivalents to $\val$ and $\step$ judgements for types. These are provided by $\prim$ and $\tstep$ respectively.
 
 \subsection{Primitives}
 {
@@ -359,29 +348,23 @@ Because there are operations involving types, we have to have a equivalents to $
         \Rule{P-I64}{\strut}{\kwLong \prim} \and
         \Rule{P-F32}{\strut}{\kwFloat \prim} \and
         \Rule{P-F64}{\strut}{\kwDouble \prim} \and
-        \Rule{P-sum}{\tau_1 \prim \\ \tau_2 \prim}{\tau_1 \tau_2 \texttt{|} \prim} \and
+        %\Rule{P-sum}{\tau_1 \prim \\ \tau_2 \prim}{\tau_1 \tau_2 \texttt{|} \prim} \and
         \Rule{P-Arrow}{\tau_1 \prim \\ \tau_2 \prim}{\kwArrow{\tau_1}{\tau_2} \prim} \and
     \end{mathpar}  
 }
 
-\subsection{Step Judgement and Type operator}
-Expressions are evaluated from left to right until everything is a value
+\subsection{Step Judgement}
+Type expressions are evaluated left to right until everything is $\prim$.
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
-        % Derivation of e* -> e*'
-        \Rule{STEP-1}
-            {\tau_1 \tstep \tau_1'}
-            {\tau_1 ~ ... ~ \tau_n \tstep \tau_1' ~ ... ~ \tau_n}
-        \and
-        \Rule{STEP-2}
+        % Derivation of T* -> T*'
+        \Rule{TSTEP}
             {\tau_1 \tstep \tau_1'
-                \\v_i \prim ~ \forall v_i \in v^*}
-            {\tau^* ~ \tau_1 ~ ... ~ \tau_n \tstep v^* ~ \tau_1' ~ ... ~ \tau_n}
+                \\\tau_i \prim ~ \forall \tau_i \in \tau^*}
+            {\tau^* ~ \tau_1 ~ ... ~ \tau_n \tstep \tau^* ~ \tau_1' ~ ... ~ \tau_n}
         \and
-        
-        \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \tstep \tau} 
     \end{mathpar}  
 }
 
@@ -400,44 +383,58 @@ Type identifiers use the same store as used for values, however their identifier
         \and \Rule{Type-Id}
             {[ ... ~ \kwid{T} \tstep \tau ~ ... ] \in \sigma}
             {\sigma; \kwid{T} \tstep \sigma; \tau}
-            
-        \and \Rule{MACRO-1}
-            {\tau^* \tstep \tau^{*\prime}}
-            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^{*\prime}}{e^*}}
     \end{mathpar}
 }
 
-\subsection{Others}
-Notably the step
+\subsection{Tuples}
 {
     \centering
     \def \MathparLineskip{\lineskip=0.43cm}
     \begin{mathpar}
         % Tuple type literals evaluation
-        \Rule{TTUPLES-1}
+        \Rule{Tuple Types - 1}
             {\tau^* \tstep \tau^{*\prime}}
             {( \tau^* ) \tstep ( \tau^{*\prime} )}
-        \Rule{TTUPLES-2}
+        \Rule{Tuple Types - 2}
             {\tau_i \prim ~ \forall \tau_i \in \tau^*}
             {(\tau^*) \prim}
         \and
         
         % unpack operator
-        \Rule{TTUPLES-3}
+        \Rule{Tuple Types - 3}
             {\tau_i \prim ~ \forall~ i \in [1, n]}
             {\kwunpack{(\tau_1 ... \tau_n)} \tstep \tau_1 ... \tau_n}
-        \Rule{TTUPLES-4}
+        \Rule{Tuple Types - 4}
             {\strut}
             {\kwunpack{\kwUnit} \tstep \varepsilon}
         \and
+    \end{mathpar}
+}
+
+\subsection{Others}
+{
+    \centering
+    \def \MathparLineskip{\lineskip=0.43cm}
+    \begin{mathpar}
+        \Rule{Type Equiv}
+            {\tau_1 \prim \\ \tau_2 \prim}
+            {\tau_1~ \tau_2~ ==~ \tstep~ \kwnumlit{(\delta_{\tau_1 \tau_2})}{\kwInt}}
 
         % fixed point combinator
-        \Rule{Fixed Point}{e \val \\ \tau \prim}{\kwfix{e}{\tau} \val}
+        \and \Rule{Fixed Point}{e \val \\ \tau \prim}{\kwfix{e}{\tau} \val}
+        
+        % input types for macros can step
+        \and \Rule{Macro Type Step}
+            {\tau^* \tstep \tau^{*\prime}}
+            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^{*\prime}}{e^*}}
+        
+        % typeof operator
+        \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \tstep \tau} 
     \end{mathpar}
 }
 
 \section{Typing}
-
+Note that because our notation is defined as ignoring irrelevant values there could be  
 \subsection{Step Judgement}
 {
     \centering
@@ -472,6 +469,15 @@ Notably the step
                 \\ \typed{\ctx}{e_2}{\tau}
                 \\ \typed{\ctx}{e_3}{\tau}}
             {\typed{\ctx}{\kwtern{e_1}{e_2}{e_3}}{\tau}}
+        \and \Rule{T-8}
+            {\typed{\ctx}{e_1}{\tau}
+                \\ \typed{\ctx}{e_2}{\tau}
+                \\ \tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble \}}
+            {\typed{\ctx}{e_1~ e_2~ ==~}{\kwInt}}
+        \and \Rule{T-9}
+            {\tau_1 \prim
+                \\ \tau_2 \prim}
+            {\typed{\ctx}{\tau_1~ \tau_2~ ==~}{\kwInt}}
     \end{mathpar}
 }
 
@@ -504,15 +510,25 @@ This is why we needed the step judgement :sweatsmile:
              m \val }
             {\typed{\ctx}{m}{\kwArrow{(\tau^*)}{\kwType{(v^*~ m~ \textbf{@})}}}}
         
-        \Rule{Call}
+        \and \Rule{Call}
             {\typed{\ctx}{e_1}{\kwArrow{\tau^*}{\tau^{*\prime}}}
                 \\ \typed{\ctx}{e^*}{\tau^*}}
             {\typed{\ctx}{e^*~ e_1~ \textbf{@}}{\tau^{*\prime}}}
         
-        \Rule{Identifier}
+        \and \Rule{Identifier}
             {\ctx(\kwid{x}) = \tau}
             {\typed{\ctx}{\kwid{x}}{\tau}}
+        \and \Rule{Let}
+            {\typed{\ctx}{e}{\tau}
+                \\ \ctx(\kwid{x}) = e}
+            {\typed{\ctx}{e \kwid{x}}{\varepsilon}}
         
+        \and \Rule{Fix}
+            {\tau_1 \prim
+                \\ \typed{\ctx}{e}{\tau_2}
+                \\ \tau_2 \prim
+                \\ \tau_2 = \kwArrow{\tau^*_3 ~ \kwArrow{\tau^*_3}{\tau^*_4}}{\tau^*_4}}
+            {\typed{\ctx}{\kwfix{e}{\tau_1}}{\kwArrow{\tau^*_3}{\tau^*_4}}}
     \end{mathpar}
 }
 
@@ -523,19 +539,51 @@ If $\etyped{e^*}{\tau^*}$ then either $e^*\step e^{*\prime}$ or $e_i \val~ \fora
     By induction on the derivation of $\etyped{e^*}{\tau^*}$.
     \begin{itemize}
         \item (T-\{1,2,3,4\})
-            Then $e^* = e = \kwnumlit{n}{\tau}$, where $\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble \}$.
+            Then $e^* = \kwnumlit{n}{\tau}$, where $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
             By (V-1), $\kwnumlit{n}{\tau} \val$, so $e^* \val$.
         
         \item (T-5)
-            Then $e^* = e = e_1~ e_2~ +$ and $\kwtyped{e_1}{\tau}$ and $\kwtyped{e_2}{\tau}$ for some $\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble \}$.
+            Then $e^* = e_1~ e_2~ +$ and $\etyped{e_1}{\tau}$ and $\etyped{e_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
             
-            By induction, $e_1 \step e_1'$ or $e_1 val$.
-            If $e_1 \step e_1'$, then by \Rulename{STEP-1}, $e \step e_1'~ e_2~ +$.
+            By induction, $e_1 \step e_1'$ or $e_1 \val$.
+            If $e_1 \step e_1'$, then by \Rulename{STEP-1}, $e^* \step e_1'~ e_2~ +$.
             
-            If $e_1 \val$, then by induction, $e_2 \step e_2'$ or $e_2 val$.
-            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rulename{STEP-2}, $e \step e_1~ e_2'~ +$.
+            If $e_1 \val$, then by induction, $e_2 \step e_2'$ or $e_2 \val$.
+            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rulename{STEP-2}, $e^* \step e_1~ e_2'~ +$.
             
-            If $e_1 \val$ and $e_2 \val$, then $e_1 = \kwnumlit{n_1}{\tau}, e_2 = \kwnumlit{n_2}{\tau}$, and by \Rulename{ADD}, $e+ \step \kwnumlit{n_1 + n_2}{\tau}$.
+            If $e_1 \val$ and $e_2 \val$, then by CF, $e_1 = \kwnumlit{n_1}{\tau}, e_2 = \kwnumlit{n_2}{\tau}$, and by \Rulename{ADD}, $e^* \step \kwnumlit{n_1 + n_2}{\tau}$.
+        
+        \item (T-6)
+            $[\times / +][\Rulename{MUL} / \Rulename{ADD}]$ (T-5)
+        
+        \item (T-7)
+            Then $e^* = \kwtern{e_1}{e_2}{e_3}$ and $\etyped{e_1}{\kwInt}$. %and $\etyped{e_2}{\tau}$ and $\etyped{e_3}{\tau}$ for some $\tau$.
+            
+            By induction, $e_1 \step e_1'$ or $e_1 \val$.
+            If $e_1 \step e_1'$, then by \Rulename{STEP-1}, $e^* \step \kwtern{e_1'}{e_2}{e_3}$.
+            
+            If $e_1 \val$, then by induction, $e_2 \step e_2'$ or $e_2 \val$.
+            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rulename{STEP-2}, $e^* \step \kwtern{e_1}{e_2'}{e_3}$.
+            
+            If $e_1 \val$ and $e_2 \val$, then by induction, $e_3 \step e_3'$ or $e_3 \val$.
+            If $e_1 \val$ and $e_2 \val$ and $e_3 \step e_3'$, then by \Rulename{STEP-2}, $e \step \kwtern{e_1}{e_2}{e_3'}$.
+            
+            If $e_1 \val$ and $e_2 \val$ and $e_3 \val$, then by CF, $e_1 = \kwnumlit{n}{\kwInt}$.
+            
+            If $n = 0$, then by \Rulename{TERN-1}, $e^* \step e_3$.
+            Otherwise, $n \neq 0$, so by \Rulename{TERN-2}, $e^* \step e_2$.
+        
+        \item \Rulename{Empty Tuple}
+            Then $e^* = ()$. By \Rulename{TUPLES-2}, $() \val$.
+        
+        \item \Rulename{Tuple Type}
+            Then $e^* = (e^*_t) = (e_1~ e_2~ ...~ e_n)$.
+            
+            By induction, $\forall e_i \in e^*_t$, $e_i \val$ or $e_i \step e_i'$.
+            
+            % Then either all elements are values or there exists some *first* steppable element
+            % if there's a steppable element, then e^*_t steps using STEP-{1,2}, so e^* steps using TUPLES-1
+            % if there are no steppable elements, then all elements are values, so e^* \val by TUPLES-2
     \end{itemize}
 \end{proof}
 
