@@ -429,12 +429,17 @@ Type identifiers use the same store as used for values, however their identifier
             {\tau_1~ \tau_2~ ==~ \tstep~ \kwnumlit{(\delta_{\tau_1 \tau_2})}{\kwInt}}
 
         % fixed point combinator
-        \and \Rule{Fixed Point}{e \val \\ \tau \prim}{\kwfix{e}{\tau} \val}
+        \and \Rule{Fixed Point}
+            {\kwmacro{\tau^*~ \tau_1}{e^*} \val \\ \tau_1 \prim}
+            {\kwfix{\kwmacro{\tau^*~ \tau_1}{e^*}}{\tau_1} \val}
+        \and \Rule{Call FP}
+            {v = \kwfix{\kwmacro{\tau^*~ \tau_1}{e^*}}{\tau_1} \\ v \val}
+            {v~ \textbf{@} \step v~ \kwmacro{\tau^*~ \tau_1}{e^*}~ \textbf{@}}
         
         % input types for macros can step
         \and \Rule{Macro Type Step}
             {\tau^* \tstep \tau^{*\prime}}
-            {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^{*\prime}}{e^*}}
+            {\sigma; \kwmacro{\tau^*}{e^*} \tstep \sigma; \kwmacro{\tau^{*\prime}}{e^*}}
         
         % typeof operator
         \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \tstep \tau} 
@@ -531,7 +536,7 @@ This is why we needed the step judgement
             {\typed{\ctx}{e}{\tau}
                 \\ \ctx(\kwid{x}) = \tau}
             {\typed{\ctx}{e~ \kwid{x} =}{\varepsilon}}
-        
+            
         \and \Rule{Fix}
             {\tau_1 \prim
                 \\ \tau_1 = \kwArrow{(\tau^*_3)}{(\tau^*_4)}
