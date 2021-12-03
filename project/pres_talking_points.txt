@@ -1,0 +1,32 @@
+- Numbers: lit, +, *, ==, select
+- Tuples: (...) types and values, Unit, unpack
+- Macros: lit (diffs with ph), e t fix, @
+- Identifiers: $x =, $T =, x, T
+- type operator
+- Notes:
+  - *: zero or more of
+  - epsilon: zero of nothing
+  - args come from stack not syntax
+
+- The webassembly paper didn't ever specify step judgement
+- for e*, redex moves from left to right until all \val
+- can step within tuples
+- tuples of values are values
+
+- Lexical scope
+- assingment assigns to current scope
+- identifier
+- \sigma(-1)
+
+- trivially defined
+- Kronecker Delta
+- select is not short-circuit
+
+- operations involving types so we made types step
+- val and step equivalent to prim and tstep
+- same left-to-right behavior
+- equal precedence with e expressions
+- tuple types are just tuples of types so same behavior
+
+- they can use the same store because names don't collide
+- macros step to macro values by capturing lexically scoped variables
