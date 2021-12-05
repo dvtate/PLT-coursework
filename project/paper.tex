@@ -376,7 +376,7 @@ Type expressions are evaluated left to right until everything is $\prim$. Types 
 }
 
 \subsection{Type Identifiers}
-Type identifiers use the same store as used for values, however their identifiers are guaranteed to not conflict as type identifiers start with a capitol letter vs lower-case for value identifiers. Because we use the same store the step semantics for closures and scopes continue to work.
+Type identifiers use the same store as used for values, however their identifiers are guaranteed to not conflict as type identifiers start with a capital letter vs lower-case for value identifiers. Because we use the same store the step semantics for closures and scopes continue to work.
 {
     \centering
     \def \MathparLineskip{\lineskip=0.43cm}
@@ -532,6 +532,7 @@ This is why we needed the step judgement
         \and \Rule{Identifier}
             {\ctx(\kwid{x}) = \tau}
             {\typed{\ctx}{\kwid{x}}{\tau}}
+            
         \and \Rule{Let}
             {\typed{\ctx}{e}{\tau}
                 \\ \ctx(\kwid{x}) = \tau}
@@ -620,11 +621,77 @@ If $\etyped{e^*}{\tau^*}$ then either $e^*\step e^{*\prime}$ or $e_i \val~ \fora
             If $e_f \step e_f'$, then by \Rulename{STEP}, $e^* \step e^*_x~ e_f'~ \textbf{@}$.
             
             Otherwise, $e_f \val$. To handwave a bit, by inversion on \Rulename{Macro}, $e_f$ is a macro with a body $e^*_b$, and by \Rulename{CALL-1}, $e^* \step e^*_b ~ \textbf{end_scope}$.
+        
+        \item \Rulename{Identifier}
+            Then $e^* = \texttt{x}$.
+            By, uh, the other \Rulename{Identifier}, $e^*$ steps to a value in the store.
+            
+        \item \Rulename{Let}
+            Then $e^* = e ~ \texttt{x} =$.
+            By induction, $e \val$ or $e \step e'$.
+            If $e \step e'$, then by \Rulename{STEP}, $e^* \step e' ~ \texttt{x} =$.
+            If $e \val$, then by the other \Rulename{LET}, $\sigma;e^* \step \sigma';\varepsilon$, where $\sigma'$ is, as described in the rule, $\sigma$ with $x \step e$ added to its ``topmost'' scope.
+        
+        \item \Rulename{Fix}
+            Then $e^* = \kwfix{e}{\tau_1}$.
+            By induction, $e \val$ or $e \step e'$.
+            If $e \step e'$, then by \Rulename{STEP}, $e^* \step \kwfix{e'}{\tau_1}$.
+            If $e \val$, then I think I'm missing something here, but by \Rulename{Fixed Point}, $e^* \val$.
     \end{itemize}
 \end{proof}
 
 \subsection{Theorem - Preservation}
-If $\typed{\ctx}{e^*}{\tau^*}$ and $e^* \step e^{*\prime}$ then $\typed{\ctx}{e^{*\prime}}{\tau^{*\prime}}$ where $\tau^{*\prime} \tstep^* \tau^*$
+If $\typed{\ctx}{e^*}{\tau^*}$ and $e^* \step e^{*\prime}$ then $\typed{\ctx}{e^{*\prime}}{\tau^{*\prime}}$ where $\tau^* \tstep^* \tau^{*\prime}$.
+
+\begin{proof}
+By induction on the derivation of $e^* \step e^{*\prime}$.
+\begin{itemize}
+    \item \Rulename{STEP}
+        Then $e^* = v^* e_1 ... e_n$ and $e^{*\prime} \step v^* e_1' ... e_n$ where $\etyped{e_1}{\tau}$ and $\etyped{e_1'}{\tau'}$.
+        By induction, $\tau \tstep^* \tau'$, so by \Rulename{TSTEP}, $\tau^* \tstep^* [\tau' / \tau]\tau^*$.
+    
+    \item \Rulename{TUPLES-1}
+        Then $e^* = (e_{elem}^*)$ and $e^* \step (e_{elem}^{*\prime})$ and $\tau^* = (\tau_{elem}^*)$.
+        By induction, $\etyped{e_{elem}^{*\prime}}{\tau_{elem}^{*\prime}}$ where $\tau_{elem}^* \tstep^* \tau_{elem}^{*\prime}$. By \Rulename{Tuple Type}, $\etyped{(e_{elem}^{*\prime})}{(\tau_{elem}^{*'})}$, and by \Rulename{Tuple Types - 1}, $(\tau_{elem}^*) \tstep (\tau_{elem}^{*'})$.
+        
+    \item \Rulename{LET}
+        Then $e^* = v ~ \texttt{\$x} ~ =$. By the other \Rulename{Let}, $\etyped{e^*}{\varepsilon}$, so $\tau^* = \varepsilon$. $e^* \step \varepsilon$, so $\tau^{*\prime} = \varepsilon$, so $\tau^* = \tau^{*\prime}$.
+
+    \item \Rulename{Identifier}
+        Then $e^* = \texttt{x}$, where $\texttt{x} \step v$ is in scope. By the other \Rulename{Identifier}, the type of an identifier expression is the same as the type of the value in the store ($\etyped{v}{\tau}$), so $\tau^* = \tau^{*\prime} = \tau$.
+    
+    \item \Rulename{CALL-1}
+        Then $e^* = $.
+        % I think we need to modify (CALL-1) to require the values? Revisit.
+    
+    \item \Rulename{CALL-2}
+        % do we need a type rule for end_scope?
+    
+    \item \Rulename{TUPLES-3}
+        Then $e^* = \kwunpack{(v^*)}$, where $\etyped{v^*}{\tau_{elem}^*}$.
+        By \Rulename{Unpack}, $\tau^* = \tau_{elem}^*$. $e^* \step v^*$, so $\tau^{*\prime} = \tau^* = \tau_{elem}^*$.
+    
+    \item \Rulename{ADD} \footnote{For these three rules, terms of the form $v_n$ are better expressed as numeric literals.}
+        Then $e^* = v_1~ v_2~ +$ and $e^* \step v_3$, where $\etyped{v_1}{\tau}$ and $\etyped{v_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
+        By \Rulename{T-5}, $\etyped{v_1~ v_2~ +}{\tau}$, and by the appropriate choice of \Rulename{T-1}, \Rulename{T-2}, \Rulename{T-3}, or \Rulename{T-4}, $\etyped{v_3}{\tau}$., so $\tau^* = \tau^{*\prime} = \tau$.
+    
+    \item \Rulename{MUL}
+        Omitted for brevity on the grounds of being mechanically identical to the above case.
+    
+    \item \Rulename{EQUIV}
+        Then $e^* = v_1~ v_2~ ==$ where $\etyped{v_1}{\tau}$ and $\etyped{v_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
+        By \Rulename{T-8}, $\tau^* = \kwInt$.
+        $e^* \step \kwnumlit{n}{\kwInt}$, and by \Rulename{T-1}, $\etyped{\kwnumlit{n}{\kwInt}}{\kwInt}$, so $\tau^{*\prime} = \tau^* = \kwInt$.
+    
+    \item \Rulename{TERN-1}, \Rulename{TERN-2}
+        Then $e^* = \kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2}$ and $\etyped{v_1}{\tau}$ and $\etyped{v_2}{\tau}$ for some $\tau$.
+        By \Rulename{T-7}, $\etyped{e^*}{\tau}$, so $\tau^* = \tau$.
+        Either $e^* \step v_1$ or $e_* \step v_2$, so in either case, $\tau^{*\prime} = \tau$.
+\end{itemize}
+
+\end{proof}
+
+
 % \subsubsection{Lemma - Convergence}
 % Part 1: $\tau^* \tstep \tau^{*\prime}$ is no longer possible when $\tau_i \prim ~ \forall~ \tau_i \in \tau^*$.
 % \begin{proof}
