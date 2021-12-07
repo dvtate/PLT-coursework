@@ -26,17 +26,18 @@
 A formalization and some proofs of soundness is given to a subset of \href{https://github.com/dvtate/postfix-haskell}{a functional, postfix language}.
 \end{abstract}
 
-\section{Motivation}
+\section{Introduction}
+\subsection{Motivation}
 WebAssembly is a typed, stack-machine based assembly language which is widely supported across all major browsers. A number of new languages have come about with the goal of providing better support for the platform. Additionally it has proven the utility of typed stack-machines as a reasonably safe way to write programs.
 
 There appears to be little research into stack-based, functional languages (likely due to these languages not being common), thus more exploration on the topic could likely produce some value.
 
-The language this paper would be focused on is currently being used to power \href{https://ridder.xyz/game}{some insignificant demos}, but maybe in some distant future it will end up as the backend for a visual programming tool or some other application where guarantees of safety which could be produced here would be very important.
+\href{https://github.com/dvtate/postfix-haskell}{The language this paper focuses on} is currently being used to power \href{https://ridder.xyz/game}{some insignificant demos}, but maybe in some distant future it will end up as the backend for a visual programming tool or some other application where guarantees of safety which could be produced here would be very important.
 
-\section{The Language}
+\subsection{The Language}
 This section describes some of the key features of the original language. It is included only to show that the subset is a good representation of the original language and thus can be skipped.
 
-\subsection{Syntax}
+\subsubsection{Syntax}
 \begin{itemize}
     \item \textbf{Primitive Literals:} The language supports numeric and string literals although in the paper we will likely only cover numbers.
 
@@ -76,7 +77,7 @@ This section describes some of the key features of the original language. It is 
     \end{verbatim}
     
     
-\subsection{Preliminary Work - Type System}
+\subsubsection{Type System}
 The language currently features an incomplete type system (with some compile-time-only values not fitting into the type system). However for the paper we will simplify it to exclude these values (notably namespaces, string literals, etc.) as they don't do anything interesting.
 
 \begin{itemize}
@@ -123,71 +124,6 @@ The language currently features an incomplete type system (with some compile-tim
     \end{itemize}
 \end{itemize}
 
-\section{The Subset}
-Here we describe at a high level the subset of the language to formalize.
-
-\subsection{Branching}
-As mentioned before a ternary operator would be a reasonable subset of branching via function overloading. The tern operator is defined as an operator which 
-
-\begin{verbatim}
-# Tern takes an I32 and two values of the same type
-# and gives one of those two values
-$tern ~ :type # :type - (I32 $A $A) ($A) Arrow
-
-# As it is a subset we can define it in terms of functions
-((I32 Any Any): type swap type == ) (: ( $c $a $b ) = b ) $tern fun
-((I32 Any Any): type swap type == && ) (: ( $c $a $b ) = a ) $tern fun
-\end{verbatim}
-
-\subsection{closures}
-Via the same syntax already defined
-
-\subsection{Recursion}
-Need to think about how best to do this in a formalization but there was a lot of time that had to go into making type inference work for recursive functions (implementation + 3 pages of notes).
-
-\subsection{Tuples}
-N-ary tuples represent one of the more problematic parts of the language, notably \texttt{unpack} being the only operator with a type signature dependant on the type of it's input, additionally I have no clue how to define an arrow type with a specified but non-constant number of return values. In order to avoid expanding the scope of this assignment we may replace the \texttt{unpack} operator with a set of two operators with similar functionality.
-
-\subsection{Unions}
-Unions should be an easy addition.
-
-\begin{verbatim}
-    (()(I32 F32 |): 12 ) $value =
-    value type I32 == 1 0 tern $value_is_int =
-\end{verbatim}
-
-\subsection{Identifiers}
-Although the system for identifiers is a bit different from most languages we've covered, it's not too strange.
-
-\subsection{Types}
-Although types, which are treated as untyped stack values, aren't pretty we could take the approach of having a second stack (for operations on types) and second store (for type variables), instead of the implementation's approach. Or we can have a type judgement in addition to a value judgement. 
-
-\subsection{Operators, Keywords and Constants}
-So in summary our builtin operators would be: 
-\begin{itemize}
-    \item \texttt{+} - numeric add
-    \item \texttt{*} - numeric mul
-    \item \texttt{if-then-else} - ternary operator
-    \item \texttt{unpack} - destruct tuple (an attempt will be made)
-    \item \texttt{\~} - Extract value from an escaped identifier without invoking it (less important for safety but useful for defining additional operators using these as base)
-    \item \texttt{=} - the expression \texttt{e \$x = ...} is equivalent to \texttt{let x = e in ...}. But note that there are no 'bound variables' in this language.
-    \item \texttt{type} - get type of argument (equivalent to \texttt{type()} in python
-    \item \texttt{==} - current plan is to have an ambiguous == operator which accepts either 2 types or 2 equivalently typed values like in the language
-    \item \texttt{|} - used to form type unions
-    \item \texttt{Arrow} - closure types
-    \item \texttt{Unit} - keyword to distinguish from the empty tuple ()
-    \item \texttt{Void} - used due to lack of syntax for empty union
-\end{itemize}
-
-\subsection{Notably Not Included}
-
-\subsubsection{Classes}
-As much as we would like to include classes (notably recursive classes), it would likely add excess complexity, requiring subtyping (on N dimensions); untyped closures which can operate on types; and likely some other painpoints. And it's not clear how they could make the system unsafe as apart from being used to define recursive types are simply specialized versions of preexisting types.
-
-\subsubsection{Functions}
-Really the only reason I opted for the function overloading system instead of normal branching in the original language was in order to make it easier to extend the language.
-Function overloading seems like it would be needlessly painful to formalize and doesn't contribute to our proof of soundness any more than branching via a ternary. As the case for functions having potentially no possible branch results in a type error in the complete language and this is simplified by having an else clause.
-
 \section{Syntax}
 Here some operations also include their stack arguments, this is intended only for clarity as to what their function is as their arguments are come from the stack when it's their turn to be evaluated, not syntactically.
 
@@ -225,14 +161,94 @@ Here some operations also include their stack arguments, this is intended only f
     
     <$prog$> ::= $e^*$ | $\tau^*$ | $prog~ prog$ | $\varepsilon$
 \end{grammar}
-Notes
-\begin{itemize}
-    \item A program consists of a list of $op^*$ expressions
-    \item $\varepsilon$ is used to denote an empty program/expression
-    \item A syntactic fixed point combinator was chosen instead of $\kwrec{\tau^*}{\tau^*}{e^*}$. It's possible that one could be implemented in the language itself.
-    \item Tuples and Tuple types are enclosed in parens
-    \item $\kwunpack{e}$ and $\kwunpack{\tau}$ can give 0 or more outputs depending on the input tuple
-\end{itemize}
+Where $\varepsilon$ is used to denote an empty program/expression
+
+\subsection{Included}
+
+\subsection{Number Literals}
+Number literals are denoted with subscript indicating the numeric type they correspond with.
+This mirrors the actual language which uses the C-style syntax for number literal type inference.
+
+\subsubsection{Branching}
+As mentioned before a ternary operator would be a reasonable subset of branching via function overloading. The tern operator is defined as an operator which 
+
+\begin{verbatim}
+# Tern takes an I32 and two values of the same type
+# and gives one of those two values
+$tern ~ :type # :type - (I32 $A $A) ($A) Arrow
+
+# As it is a subset we can define it in terms of functions
+((I32 Any Any): type swap type == ) (: ( $c $a $b ) = b ) $tern fun
+((I32 Any Any): type swap type == && ) (: ( $c $a $b ) = a ) $tern fun
+\end{verbatim}
+
+\subsubsection{Identifiers}
+Identifiers are included, however, it was found that the notation for 
+dereferencing an identifier $\kweid{x}~\texttt{~}$ was confusing and
+thus the behavior was changed and thus the default behavior was
+changed such that unescaped identifiers are dereferenced instead of 
+called and values must be explicitly called via the $\texttt{@}$
+operator.
+
+\subsubsection{Macros}
+Macros use a specific instance of the type annotations, notably where the
+input types are specified and the output types are inferred. In order to 
+enable recursion, a syntactic fixed-point combinator was provided to replace
+the $\texttt{rec}$ syntax.
+
+\subsubsection{Identical to base language}
+\begin{enumerate}
+    \item Tuples and tuple related operators
+    \item type operator
+    \item $\texttt{Arrow}$ type
+    \item some math and comparison operators
+\end{enumerate}
+
+\subsection{Not included}
+Things which were either out of scope, problematic, or uninteresting were unincluded. Here a re some of the notable ones.
+
+\subsubsection{Classes}
+As much as we would like to include classes (notably recursive classes), it 
+would likely add excess complexity, requiring subtyping (on N dimensions); 
+untyped closures which can operate on types; and likely some other painpoints.
+And it's not clear how they could make the system unsafe as apart from being
+used to define recursive types are simply specialized versions of preexisting
+types.
+
+\subsubsection{Functions}
+Really the only reason the function overloading system was preferred instead
+of normal branching in the original language was in order to make it easier 
+to extend the language. Function overloading seems like it would be needlessly
+painful to formalize and doesn't contribute to our proof of soundness any more
+than branching via a ternary. As the case for functions having potentially no
+possible branch results in a type error in the complete language and this is
+simplified by having an else clause.
+
+\subsubsection{Unions}
+Although the language currently supports some operations with union types,
+the system does not work at runtime when the true type is not known, thus,
+a flaw in the base language was discovered while working on the semantics
+for this subset and thus the original system needs to be redesigned. This
+would likely mean that the only way to make runtime union-types would be
+via the \texttt{make} operator which is related to \texttt{class} and we
+would additionally need to either make a different way to branch on unions
+or make the compiler able to determine if the condition implies a particular
+union member. Additionally Void was not included as on paper, it doesn't
+work with the type inference algorithm.
+
+\begin{verbatim}
+(()(I32 F32): ... ) $get_num =
+get_num $n =
+(: n type I32 == ) (: 
+    # How do we know that it's an i32 here?
+) $branch fun
+(: n type F32 == ) (: 
+    # How do we know that it's an f32 here?
+) $branch fun
+branch
+\end{verbatim}
+
+The above example program illustrates the problem with the language.
 
 \section{Small Step Semantics For Values}
 \subsection{Notation}
@@ -543,6 +559,8 @@ This is why we needed the step judgement
                 \\ \tau_1 = \kwArrow{(\tau^*_3)}{(\tau^*_4)}
                 \\ \typed{\ctx}{e}{\kwArrow{(\tau^*_3 ~ \tau_1)}{(\tau^*_4)}}}
             {\typed{\ctx}{\kwfix{e}{\tau_1}}{\tau_1}}
+            
+        \and \Rule{end_scope type}{\strut}{\typed{\ctx}{\kw{end\_scope}}{\varepsilon}}
     \end{mathpar}
 }
 
@@ -647,7 +665,7 @@ If $\typed{\ctx}{e^*}{\tau^*}$ and $e^* \step e^{*\prime}$ then $\typed{\ctx}{e^
 By induction on the derivation of $e^* \step e^{*\prime}$.
 \begin{itemize}
     \item \Rulename{STEP}
-        Then $e^* = v^* e_1 ... e_n$ and $e^{*\prime} \step v^* e_1' ... e_n$ where $\etyped{e_1}{\tau}$ and $\etyped{e_1'}{\tau'}$.
+        Then $e^* = v^* e_1 ... e_n$ and $e^ \step v^* e_1' ... e_n$ where $\etyped{e_1}{\tau}$ and $\etyped{e_1'}{\tau'}$.
         By induction, $\tau \tstep^* \tau'$, so by \Rulename{TSTEP}, $\tau^* \tstep^* [\tau' / \tau]\tau^*$.
     
     \item \Rulename{TUPLES-1}
@@ -690,20 +708,5 @@ By induction on the derivation of $e^* \step e^{*\prime}$.
 \end{itemize}
 
 \end{proof}
-
-
-% \subsubsection{Lemma - Convergence}
-% Part 1: $\tau^* \tstep \tau^{*\prime}$ is no longer possible when $\tau_i \prim ~ \forall~ \tau_i \in \tau^*$.
-% \begin{proof}
-% Proof by exhaustion with all rules involving $\prim$ types not stepping. To values
-% \end{proof}
-% Part 2: $\tau^* \tstep \tau^{*\prime}$ will eventually step to a $\tau^{*\prime}$ such that $\tau_i \prim ~ \forall~ \tau_i \in \tau^{*\prime}$.
-% \begin{proof}
-% This is provable by the fact that the language does not feature recursive types and the only form of recursion in the language is via the fix operator and $\kwType{}$ operator does no have to follow recursive paths in order to get it's type (Type Rules \Rulename{Macro}, \Rulename{Fix}). The other rules are trivial (ie - step to a $\prim$) and/or irrelevant to the assertion
-% \end{proof}
-
-% \subsubsection{Proof}
-% \begin{proof}
-% \end{proof}
 
 \end{document}
