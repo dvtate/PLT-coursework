@@ -16,46 +16,37 @@
 
 \input{macros}
 
-\title{Verifying a Postfix Language \\
-    \large CS595 Final Project}
+\title{Verifying a Postfix Language}
 \author{Dustin Van Tate Testa and Andrew Neth}
 
 \begin{document}
 \maketitle
-\begin{abstract}
-A formalization and some proofs of soundness is given to a subset of \href{https://github.com/dvtate/postfix-haskell}{a functional, postfix language}.
-\end{abstract}
+% \begin{abstract}
+% A formalization and some proofs of soundness is given to a subset of \href{https://github.com/dvtate/postfix-haskell}{a functional, postfix language}.
+% \end{abstract}
 
 \section{Introduction}
 \subsection{Motivation}
-WebAssembly is a typed, stack-machine based assembly language which is widely supported across all major browsers. A number of new languages have come about with the goal of providing better support for the platform. Additionally it has proven the utility of typed stack-machines as a reasonably safe way to write programs.
-
-There appears to be little research into stack-based, functional languages (likely due to these languages not being common), thus more exploration on the topic could likely produce some value.
-
-\href{https://github.com/dvtate/postfix-haskell}{The language this paper focuses on} is currently being used to power \href{https://ridder.xyz/game}{some insignificant demos}, but maybe in some distant future it will end up as the backend for a visual programming tool or some other application where guarantees of safety which could be produced here would be very important.
+\href{https://github.com/dvtate/postfix-haskell}{The functional, postfix language this paper focuses on} is currently being used to power \href{https://ridder.xyz/game}{some insignificant demos}, but maybe in some distant future it will end up as the backend for a visual programming tool or some other application where guarantees of safety like the ones here would be very important.
 
 \subsection{The Language}
-This section describes some of the key features of the original language. It is included only to show that the subset is a good representation of the original language and thus can be skipped.
+This section describes some of the key features of the original language. It is included only to show that the subset we chose is a good representation of the original language and thus can be skipped.
 
-\subsubsection{Syntax}
+\subsubsection{Full Syntax}
 \begin{itemize}
-    \item \textbf{Primitive Literals:} The language supports numeric and string literals although in the paper we will likely only cover numbers.
+    \item \textbf{Primitive Literals:} The language supports number and string literals
 
     \item \textbf{Closures:} closures aka macros are enclosed within \texttt{(: ... )} and can have type annotations, for example \texttt{((I32 I32) (I32) rec: ... )}.
 
     \item \textbf{Tuples:} Tuples are enclosed within parenthesis. There is no reason to include separators like commas.
 
     \item \textbf{Identifiers:} there are two types of identifiers, escaped identifiers which start with \texttt{\$} are generally used for assignment and unescaped identifiers which are used for to invoke the value to which the identifier refers.
-    
-    In the language, identifiers can reference both typed and untyped values, but likely will be limited to typed values in the paper.
 
     \item \textbf{Functions:} function overloading is the only supported form of branching in the language. The syntax for the \texttt{fun} operator is as follows. 
 
-    \texttt{(($..._1$)($..._2$ I32): Condition ) (: Action ) \$Identifier fun}.
+    \texttt{(($..._1$)($..._2$ I32): Condition ) (($..._1$): Action ) \$Identifier fun}.
 
-    In the final paper this will likely get replaced with a ternary.
-
-    \item \textbf{Other Operators:} Although the majority of primitive operators are defined in the standard library, the compiler actually has a few builtins as well. Although these are very important to actually using the language they aren't worthy of listing out in their entirety here. Some examples include: \texttt{require}, \texttt{use}, \texttt{import}, \texttt{export}, \texttt{asm}, \texttt{namespace}, \texttt{type}, \texttt{unpack}, \texttt{class}, \texttt{=}, \texttt{|}, \texttt{@}, \texttt{\~}, \texttt{==}, \texttt{make}
+    \item \textbf{Other Operators:} Although the majority of primitive operators are defined in the standard library, the compiler actually has a few builtins as well. Although these are very important to actually using the language, they aren't worthy of listing out in their entirety here. Some examples include: \texttt{require}, \texttt{use}, \texttt{import}, \texttt{export}, \texttt{asm}, \texttt{namespace}, \texttt{type}, \texttt{unpack}, \texttt{class}, \texttt{=}, \texttt{|}, \texttt{@}, \texttt{\~}, \texttt{==}, \texttt{make}
 \end{itemize}
     
     Combining these concepts we can make the following program.
@@ -164,45 +155,32 @@ Here some operations also include their stack arguments, this is intended only f
 Where $\varepsilon$ is used to denote an empty program/expression
 
 \subsection{Included}
+In addition to the following, tuples and tuple related operators,$\kwType{}$ operator, $\texttt{Arrow}$ type, and some math and comparison operators were included identically to their counterparts in base language.
 
-\subsection{Number Literals}
+\subsubsection{Number Literals}
 Number literals are denoted with subscript indicating the numeric type they correspond with.
 This mirrors the actual language which uses the C-style syntax for number literal type inference.
 
 \subsubsection{Branching}
-As mentioned before a ternary operator would be a reasonable subset of branching via function overloading. The tern operator is defined as an operator which 
+As mentioned before a ternary operator would be a reasonable subset of branching via function overloading. The $\kwtern{}{}{}$ operator is defined as an operator which takes a condition and two values of the same type, and gives one depending on the condition. Which could be defined like so:
 
 \begin{verbatim}
-# Tern takes an I32 and two values of the same type
-# and gives one of those two values
-$tern ~ :type # :type - (I32 $A $A) ($A) Arrow
-
-# As it is a subset we can define it in terms of functions
-((I32 Any Any): type swap type == ) (: ( $c $a $b ) = b ) $tern fun
-((I32 Any Any): type swap type == && ) (: ( $c $a $b ) = a ) $tern fun
+((I32 Any Any): type swap type == ) (: ( $c $a $b ) = b ) $select fun
+((I32 Any Any): type swap type == && ) (: ( $c $a $b ) = a ) $select fun
 \end{verbatim}
 
 \subsubsection{Identifiers}
 Identifiers are included, however, it was found that the notation for 
 dereferencing an identifier $\kweid{x}~\texttt{~}$ was confusing and
-thus the behavior was changed and thus the default behavior was
-changed such that unescaped identifiers are dereferenced instead of 
+thus the subset was changed such that unescaped identifiers are dereferenced instead of 
 called and values must be explicitly called via the $\texttt{@}$
 operator.
 
 \subsubsection{Macros}
-Macros use a specific instance of the type annotations, notably where the
+Macros use a specific variation of the type annotations, notably where the
 input types are specified and the output types are inferred. In order to 
 enable recursion, a syntactic fixed-point combinator was provided to replace
 the $\texttt{rec}$ syntax.
-
-\subsubsection{Identical to base language}
-\begin{enumerate}
-    \item Tuples and tuple related operators
-    \item type operator
-    \item $\texttt{Arrow}$ type
-    \item some math and comparison operators
-\end{enumerate}
 
 \subsection{Not included}
 Things which were either out of scope, problematic, or uninteresting were unincluded. Here a re some of the notable ones.
@@ -237,22 +215,15 @@ union member. Additionally Void was not included as on paper, it doesn't
 work with the type inference algorithm.
 
 \begin{verbatim}
-(()(I32 F32): ... ) $get_num =
-get_num $n =
-(: n type I32 == ) (: 
+(: type I32 == ) (: 
     # How do we know that it's an i32 here?
 ) $branch fun
-(: n type F32 == ) (: 
-    # How do we know that it's an f32 here?
-) $branch fun
-branch
+(()(I32 F32): ... ) @ branch
 \end{verbatim}
-
-The above example program illustrates the problem with the language.
 
 \section{Small Step Semantics For Values}
 \subsection{Notation}
-To annotate stack values we used the notation of two values being written next to each other, as they would be written in the language itself. The values at the bottom of the stack (furthest to the left) are often irrelevant, and thus can be omitted with this notation. The superscript * notation (ie - $e^*$) is used to annotate 0 or more of the preceding. This is explicitly defined in the syntax but implicitly expanded in the semantics.
+To annotate stack values we used the notation of two values being written next to each other, as they would be written in the language itself. The values at the bottom of the stack (furthest to the left) are often irrelevant, and thus for most rules can be omitted with this notation. The superscript * notation (ie - $e^*$) is used to annotate 0 or more of the preceding.
 
 \subsection{Value and Step Judgement}
 The step judgement states that expressions are evaluated from left to right until everything is a value. Values are defined further as we go through.
@@ -261,23 +232,23 @@ The step judgement states that expressions are evaluated from left to right unti
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
         % Derivation of e* -> e*'
-        \Rule{STEP}
+        \Rule{Step}
             {e_1 \step e_1'
                 \\v_i \val ~ \forall~ v_i \in v^*}
             {v^* ~ e_1 ~ ... ~ e_n \step v^* ~ e_1' ~ ... ~ e_n}
         \and
 
         % number literals
-        \Rule{V-1}
+        \Rule{V-Num}
              {\forall ~ \tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
              {\kwnumlit{n}{\tau} \val}
         \and
         
         % Tuple literals evaluation
-        \Rule{TUPLES-1}
+        \Rule{S-Tuple}
             {e^* \step e^{*\prime}}
             {( e^* ) \step ( e^{*\prime} )}
-        \Rule{TUPLES-2}
+        \Rule{V-Tuple}
             {v_i \val ~ \forall v_i \in v^*}
             {(v^*) \val}
         \and
@@ -285,29 +256,35 @@ The step judgement states that expressions are evaluated from left to right unti
 }
 
 \subsection{Macros, Identifiers and Scoping}
-The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is a mapping from identifiers to values. Notice the addition of an auxiliary $\kw{end\_scope}$ operator which removes the current scope. A macro literal steps to a macro value by first stepping its input types until they're all values before substituting all of the values in the store within its body (forming a closure). Calling a macro value pushes a new empty mappings list onto the store, then places the macro's expressions and an $\kw{end\_scope}$ operator onto the stack, enabling local identifiers.
+The store, $\sigma$, consists of a list of scopes, where each scope is a mapping from identifiers to values. Notice the addition of an auxiliary $\kw{end\_scope}$ operator which removes the current scope. A macro literal steps to a macro value by first stepping its input types until they're all values before substituting all of the values in the store within its body (forming a closure) (this rule comes later). Calling a macro value pushes a new empty mappings list onto the store, then places the macro's body and an $\kw{end\_scope}$ operator onto the stack, enabling locals.
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}    
         % Closures capture lexically scoped variables via substitution 
-        \Rule{LET}
+        \Rule{S-Let}
             {v \val
                 \\ \sigma = [ [...], ... [ x_1 \step v_1 ~...~ x_n \step v_n] ]
                 \\ \sigma' = [ [...], ... [ x_1 \step v_1 ~...~ x_n \step v_n, x_{n+1} \step v] ]}
             {\sigma; v ~ \kweid{x} = \step \sigma'; \varepsilon}
             
-        \and \Rule{Identifier}
+        \and \Rule{S-Ident}
             { \kwid{x} \step v \in \sigma(-1)}
             {\sigma; \kwid{x} \step \sigma; v}
 
-        \and \Rule{CALL-1}
+        \and \Rule{S-Call}
             {\sigma' = \sigma \cup [~]
                 \\ v = \kwmacro{\tau^*}{e^*}
                 \\ v \val}
             {\sigma; v~ \textbf{@} \step \sigma'; e^* \kw{end\_scope}}
+        
+        \and \Rule{S-Fix}
+            %{v = \kwfix{\kwmacro{\tau^*~ \tau_1}{e^*}}{\tau_1} \\ v \val}
+            {f = \kwfix{v}{\tau} \\ f \val}
+            %{v~ \textbf{@} \step v~ \kwmacro{\tau^*~ \tau_1}{e^*}~ \textbf{@}}
+            {f~ \textbf{@} \step f~ v~ \textbf{@}}
 
-        \and \Rule{CALL-2}
+        \and \Rule{S-End}
             {\sigma = [s_1,...s_n,s_{n+1}] \\ \sigma' = [s_1,...s_n]}
             {\sigma; \kw{end\_scope} \step \sigma'; \varepsilon}
 
@@ -315,38 +292,37 @@ The store, $\sigma$, consists of a list of \textit{scopes}, where each scope is 
 }
 
 \subsection{Others}
-Notice the use of the \href{https://en.wikipedia.org/wiki/Kronecker_delta}{Kronecker Delta} to define the equals operator.
+Notice the use of the \href{https://en.wikipedia.org/wiki/Kronecker_delta}{Kronecker Delta} to define the equals operator. Here $\tau$ indicates the rule is defined for all numeric types $\tau$
 {
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
         % unpack operator
-        \Rule{TUPLES-3}
+        \Rule{S-Unpack}
             {v_i \val ~\forall~ v_i \in v^*}
             {\kwunpack{(v^*)} \step v^*}
 
         % math
-        \Rule{ADD}
-            {v_1 \val \\ v_2 \val \\ v_3 = v_1 + v_2}
-            {v_1~ v_2~ + \step v_3}
+        \Rule{S-Add}
+            {\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
+            {\kwnumlit{n_1}{\tau}~ \kwnumlit{n_2}{\tau}~ +~ \step \kwnumlit{(n_1 + n_2)}{\tau}}
         \and
-        \Rule{MUL}
-            {v_1 \val \\ v_2 \val \\ v_3 = v_1 * v_2}
-            {v_1~ v_2~ \times \step v_3}
+        \Rule{S-Mul}
+            {\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
+            {\kwnumlit{n_1}{\tau}~ \kwnumlit{n_2}{\tau}~ \times~ \step \kwnumlit{(n_1 \times n_2)}{\tau}}
         \and
         
         % Comparisons
-        \Rule{EQUIV}
-            {v_1 \val \\ v_2 \val}
-            {v_1~ v_2~ ==~ \step \kwnumlit{(\delta_{v_1 v_2})}{\kwInt}}
+        \Rule{S-Eq}
+            {\tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble\}}
+            {\kwnumlit{n_1}{\tau}~ \kwnumlit{n_2}{\tau}~ ==~ \step \kwnumlit{(\delta_{n_1 n_2})}{\kwInt}}
 
         % Ternary
-        \Rule{TERN-1}
+        \Rule{S-Tern-0}
             {v_1 \val \\ v_2 \val}
             {\kwtern{\kwnumlit{0}{\kwInt}}{v_1}{v_2} \step v_2}
-        \Rule{TERN-2}
-            {v_1 \val \\ v_2 \val \\ n \neq 0}
-            {\kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2} \step v_1}
+        \Rule{S-Tern-1}
+            {v_1 \val \\ v_2 \val \\ n \neq \kwnumlit{0}{\kwInt}}            {\kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2} \step v_1}
         \and
     \end{mathpar}
 }
@@ -359,10 +335,7 @@ Because there are operations involving types, we have to have a equivalents to $
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
-        \Rule{P-I32}{\strut}{\kwInt \prim} \and
-        \Rule{P-I64}{\strut}{\kwLong \prim} \and
-        \Rule{P-F32}{\strut}{\kwFloat \prim} \and
-        \Rule{P-F64}{\strut}{\kwDouble \prim} \and
+        \Rule{P-Num}{\tau \in {\kwInt, \kwLong, \kwFloat, \kwDouble}}{\tau \prim} \and
         %\Rule{P-sum}{\tau_1 \prim \\ \tau_2 \prim}{\tau_1 \tau_2 \texttt{|} \prim} \and
         \Rule{P-Arrow}{\tau_1 \prim \\ \tau_2 \prim}{\kwArrow{\tau_1}{\tau_2} \prim} \and
     \end{mathpar}  
@@ -375,16 +348,16 @@ Type expressions are evaluated left to right until everything is $\prim$. Types 
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
         % Derivation of T* -> T*'
-        \Rule{TSTEP}
+        \Rule{Ty-Step}
             {\tau \tstep \tau'
                 \\\tau_i \prim ~ \forall~ \tau_i \in \tau_1^*}
             {\tau_1^* ~ \tau ~ \tau_2^* \tstep \tau_1^* ~ \tau' ~ \tau_2^*}
 
-        \and \Rule{TSTEP - Mixed}
+        \and \Rule{Ty-Step-Mixed}
             {\tau^* \tstep \tau^{*\prime}
                 \\ v_i \val ~ \forall v_i \in v^*}
             {v^*~ \tau^*~ e^*~ \tstep v^*~ \tau^{*\prime}~ e^*}
-        \and \Rule{STEP - Mixed}
+        \and \Rule{Val-Step-Mixed}
             {e^* \step e^{*\prime}
                 \\ \tau_i \prim ~ \forall~ \tau_i \in \tau^*}
             {\tau^*~ e^* ~ \tau_2^*  \step \tau^* ~ e^{*\prime} ~ \tau_1}
@@ -397,19 +370,19 @@ Type identifiers use the same store as used for values, however their identifier
     \centering
     \def \MathparLineskip{\lineskip=0.43cm}
     \begin{mathpar}
-        \Rule{Type-Let}
+        \Rule{Ty-Let}
             {\tau \prim
                 \\ \sigma = [ [...], ... [ T_1 \tstep \tau_1 ... T_n \tstep \tau_n] ]
                 \\ \sigma' = [ [...], ... [ T_1 \tstep \tau_1 ... T_n \tstep \tau_n, T_{n+1} \tstep \tau] ]}
             {\sigma; \tau ~ \kweid{T} = \tstep \sigma'; \varepsilon}
     
-        \and \Rule{MACRO-2}
+        \and \Rule{Macro-Subst}
             {\sigma = [ ..., [x_1 \step v_1 ~ ... ~ x_n \step v_n, 
                 ~ T_1 \tstep \tau_1 ~ ... ~ T_n \tstep \tau_n ]]
                 \\ \tau_i \val~ \forall~ \tau_i \in \tau^*}
             {\sigma; \kwmacro{\tau^*}{e^*} \step \sigma; \kwmacro{\tau^*}{[v_1/x_1]...[v_n/x_n][\tau_1/T_1]...[\tau_n/T_n] e^*} \val}
 
-        \and \Rule{Type-Id}
+        \and \Rule{Ty-Ident}
             { \kwid{T} \step \tau \in \sigma(-1)}
             {\sigma; \kwid{T} \tstep \sigma; \tau}
     \end{mathpar}
@@ -421,15 +394,15 @@ Type identifiers use the same store as used for values, however their identifier
     \def \MathparLineskip{\lineskip=0.43cm}
     \begin{mathpar}
         % Tuple type literals evaluation
-        \Rule{Tuple Types - 1}
+        \Rule{Ty-Tuple}
             {\tau^* \tstep \tau^{*\prime}}
             {( \tau^* ) \tstep ( \tau^{*\prime} )}
-        \Rule{Tuple Types - 2}
+        \Rule{P-Tuple}
             {\tau_i \prim ~ \forall \tau_i \in \tau^*}
             {(\tau^*) \prim}
         \and
         % unpack operator
-        \Rule{Tuple Types - 3}
+        \Rule{Ty-Unpack}
             {\tau_i \prim ~ \forall~ \tau_i \in \tau^*}
             {\kwunpack{(\tau^*)} \tstep \tau_1 ... \tau_n}
     \end{mathpar}
@@ -440,25 +413,22 @@ Type identifiers use the same store as used for values, however their identifier
     \centering
     \def \MathparLineskip{\lineskip=0.43cm}
     \begin{mathpar}
-        \Rule{Type Equiv}
+        \Rule{S-TyEq}
             {\tau_1 \prim \\ \tau_2 \prim}
-            {\tau_1~ \tau_2~ ==~ \tstep~ \kwnumlit{(\delta_{\tau_1 \tau_2})}{\kwInt}}
+            {\tau_1~ \tau_2~ ==~ \step~ \kwnumlit{(\delta_{\tau_1 \tau_2})}{\kwInt}}
 
         % fixed point combinator
-        \and \Rule{Fixed Point}
-            {\kwmacro{\tau^*~ \tau_1}{e^*} \val \\ \tau_1 \prim}
-            {\kwfix{\kwmacro{\tau^*~ \tau_1}{e^*}}{\tau_1} \val}
-        \and \Rule{Call FP}
-            {v = \kwfix{\kwmacro{\tau^*~ \tau_1}{e^*}}{\tau_1} \\ v \val}
-            {v~ \textbf{@} \step v~ \kwmacro{\tau^*~ \tau_1}{e^*}~ \textbf{@}}
+        \and \Rule{V-Fix}
+            {e \val \\ \tau_1 \prim}
+            {\kwfix{e}{\tau_1} \val}
         
         % input types for macros can step
-        \and \Rule{Macro Type Step}
+        \and \Rule{Ty-Macro}
             {\tau^* \tstep \tau^{*\prime}}
             {\sigma; \kwmacro{\tau^*}{e^*} \tstep \sigma; \kwmacro{\tau^{*\prime}}{e^*}}
         
         % typeof operator
-        \Rule{TYPE-1}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \tstep \tau} 
+        \Rule{Ty-Typeof}{v \val \\ \etyped{v}{\tau}}{\kwType{v} \tstep \tau} 
     \end{mathpar}
 }
 
@@ -469,7 +439,7 @@ Note that we're using a somewhat weird notation for a stack machine (normally th
 {
     \centering
     \begin{mathpar}
-    \Rule{T-0}
+    \Rule{T-Step}
         {\typed{\ctx}{e}{\tau} \\ \tau \tstep \tau'}
         {\typed{\ctx}{e}{\tau'}}
     \end{mathpar}
@@ -480,31 +450,28 @@ Note that we're using a somewhat weird notation for a stack machine (normally th
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
-        \Rule{T-1}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwInt}}{\kwInt}}
-        \and \Rule{T-2}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwLong}}{\kwLong}}
-        \and \Rule{T-3}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwFloat}}{\kwFloat}}
-        \and \Rule{T-4}{\strut}{\typed{\ctx}{\kwnumlit{n}{\kwDouble}}{\kwDouble}}
-        \and \Rule{T-5}
+        \Rule{T-Num}{\tau \in {\kwInt, \kwLong, \kwFloat, \kwDouble}}{\typed{\ctx}{\kwnumlit{n}{\tau}}{\tau}}
+        \and \Rule{T-Add}
             {\typed{\ctx}{e_1}{\tau} 
                 \\ \typed{\ctx}{e_2}{\tau} 
                 \\ \tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}}
             {\typed{\ctx}{e_1~ e_2~ +}{\tau}}
-        \and \Rule{T-6}
+        \and \Rule{T-Mul}
             {\typed{\ctx}{e_1}{\tau} 
                 \\ \typed{\ctx}{e_2}{\tau} 
                 \\ \tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}}
             {\typed{\ctx}{e_1~ e_2~ \times}{\tau}}
-        \and \Rule{T-7}
+        \and \Rule{T-Tern}
             {\typed{\ctx}{e_1}{\kwInt}
                 \\ \typed{\ctx}{e_2}{\tau}
                 \\ \typed{\ctx}{e_3}{\tau}}
             {\typed{\ctx}{\kwtern{e_1}{e_2}{e_3}}{\tau}}
-        \and \Rule{T-8}
+        \and \Rule{T-Eq}
             {\typed{\ctx}{e_1}{\tau}
                 \\ \typed{\ctx}{e_2}{\tau}
                 \\ \tau \in \{ \kwInt, \kwLong, \kwFloat, \kwDouble \}}
             {\typed{\ctx}{e_1~ e_2~ ==~}{\kwInt}}
-        \and \Rule{T-9}
+        \and \Rule{T-TyEq}
             {\tau_1 \prim
                 \\ \tau_2 \prim}
             {\typed{\ctx}{\tau_1~ \tau_2~ ==~}{\kwInt}}
@@ -516,11 +483,11 @@ Note that we're using a somewhat weird notation for a stack machine (normally th
     \centering
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
-        \Rule{Empty Tuple}{\strut}{\typed{\ctx}{()}{\kwUnit}}
-        \and \Rule{Tuple Type}
+        \Rule{T-Unit}{\strut}{\typed{\ctx}{()}{\kwUnit}}
+        \and \Rule{T-Tuple}
             {\tau^* = \{ \tau_i ~\text{such that}~ \typed{\ctx}{e_i}{\tau_i}~ \forall ~ e_i \in e^* \} }
             {\typed{\ctx}{(e^*)}{(\tau^*)}}
-        \and \Rule{Unpack}
+        \and \Rule{T-Unpack}
             {\typed{\ctx}{(e^*)}{(\tau^*)}}
             {\typed{\ctx}{\kwunpack{(e^*)}}{\tau^*}}
     \end{mathpar}
@@ -533,34 +500,34 @@ This is why we needed the step judgement
     \def \MathparLineskip {\lineskip=0.43cm}
     \begin{mathpar}
         % Move this to type rules   
-        \Rule{Macro}
+        \Rule{T-Macro}
             {\tau^* = \tau_1 ~...~ \tau_n \\
              v^* = \etyped{v_1}{\tau_1} ~...~ \etyped{v_n}{\tau_n} \\
              m = \kwmacro{\tau^*}{e^*} \\
              m \val }
             {\typed{\ctx}{\kwmacro{\tau^*}{e^*}}{\kwArrow{(\tau^*)}{\kwType{(v^*~ m~ \textbf{@})}}}}
         
-        \and \Rule{Call}
-            {\typed{\ctx}{e_1}{\kwArrow{\tau^*}{\tau^{*\prime}}}
+        \and \Rule{T-Call}
+            {\typed{\ctx}{e_1}{\kwArrow{(\tau^*)}{(\tau^{*\prime})}}
                 \\ \typed{\ctx}{e^*}{\tau^*}}
             {\typed{\ctx}{e^*~ e_1~ \textbf{@}}{\tau^{*\prime}}}
         
-        \and \Rule{Identifier}
+        \and \Rule{T-Ident}
             {\ctx(\kwid{x}) = \tau}
             {\typed{\ctx}{\kwid{x}}{\tau}}
             
-        \and \Rule{Let}
+        \and \Rule{T-Let}
             {\typed{\ctx}{e}{\tau}
                 \\ \ctx(\kwid{x}) = \tau}
             {\typed{\ctx}{e~ \kwid{x} =}{\varepsilon}}
             
-        \and \Rule{Fix}
+        \and \Rule{T-Fix}
             {\tau_1 \prim
                 \\ \tau_1 = \kwArrow{(\tau^*_3)}{(\tau^*_4)}
                 \\ \typed{\ctx}{e}{\kwArrow{(\tau^*_3 ~ \tau_1)}{(\tau^*_4)}}}
             {\typed{\ctx}{\kwfix{e}{\tau_1}}{\tau_1}}
             
-        \and \Rule{end_scope type}{\strut}{\typed{\ctx}{\kw{end\_scope}}{\varepsilon}}
+        \and \Rule{T-End}{\strut}{\typed{\ctx}{\kw{end\_scope}}{\varepsilon}}
     \end{mathpar}
 }
 
@@ -570,93 +537,153 @@ If $\etyped{e^*}{\tau^*}$ then either $e^*\step e^{*\prime}$ or $e_i \val~ \fora
 \begin{proof}
     By induction on the derivation of $\etyped{e^*}{\tau^*}$.
     \begin{itemize}
-        \item (T-\{1,2,3,4\})
+        \item \Rname{T-Num}
             Then $e^* = \kwnumlit{n}{\tau}$, where $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
-            By (V-1), $\kwnumlit{n}{\tau} \val$, so $e^* \val$.
+            By \Rname{V-Num}, $\kwnumlit{n}{\tau} \val$, so $e^* \val$.
         
-        \item (T-5)
+        \item \Rname{T-Add}
             Then $e^* = e_1~ e_2~ +$ and $\etyped{e_1}{\tau}$ and $\etyped{e_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
             
             By induction, $e_1 \step e_1'$ or $e_1 \val$.
-            If $e_1 \step e_1'$, then by \Rulename{STEP}, $e^* \step e_1'~ e_2~ +$.
+            If $e_1 \step e_1'$, then by \Rname{Step}, $e^* \step e_1'~ e_2~ +$.
             
             If $e_1 \val$, then by induction, $e_2 \step e_2'$ or $e_2 \val$.
-            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rulename{STEP}, $e^* \step e_1~ e_2'~ +$.
+            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rname{Step}, $e^* \step e_1~ e_2'~ +$.
             
-            If $e_1 \val$ and $e_2 \val$, then by CF, $e_1 = \kwnumlit{n_1}{\tau}, e_2 = \kwnumlit{n_2}{\tau}$, and by \Rulename{ADD}, $e^* \step \kwnumlit{n_1 + n_2}{\tau}$.
+            If $e_1 \val$ and $e_2 \val$, then by CF, $e_1 = \kwnumlit{n_1}{\tau}, e_2 = \kwnumlit{n_2}{\tau}$, and by \Rname{S-Add}, $e^* \step \kwnumlit{n_1 + n_2}{\tau}$.
         
-        \item (T-6)
-            $[\times / +][\Rulename{MUL} / \Rulename{ADD}]$ (T-5)
+        \item \Rname{T-Mul}
+            $[\times / +][\Rname{S-Mul} / \Rname{S-Add}]$ \Rname{T-Add}
         
-        \item (T-7)
+        \item \Rname{T-Tern}
             Then $e^* = \kwtern{e_1}{e_2}{e_3}$ and $\etyped{e_1}{\kwInt}$. %and $\etyped{e_2}{\tau}$ and $\etyped{e_3}{\tau}$ for some $\tau$.
             
             By induction, $e_1 \step e_1'$ or $e_1 \val$.
-            If $e_1 \step e_1'$, then by \Rulename{STEP}, $e^* \step \kwtern{e_1'}{e_2}{e_3}$.
+            If $e_1 \step e_1'$, then by \Rname{Step}, $e^* \step \kwtern{e_1'}{e_2}{e_3}$.
             
             If $e_1 \val$, then by induction, $e_2 \step e_2'$ or $e_2 \val$.
-            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rulename{STEP}, $e^* \step \kwtern{e_1}{e_2'}{e_3}$.
+            If $e_1 \val$ and $e_2 \step e_2'$, then by \Rname{Step}, $e^* \step \kwtern{e_1}{e_2'}{e_3}$.
             
             If $e_1 \val$ and $e_2 \val$, then by induction, $e_3 \step e_3'$ or $e_3 \val$.
-            If $e_1 \val$ and $e_2 \val$ and $e_3 \step e_3'$, then by \Rulename{STEP}, $e \step \kwtern{e_1}{e_2}{e_3'}$.
+            If $e_1 \val$ and $e_2 \val$ and $e_3 \step e_3'$, then by \Rname{Step}, $e \step \kwtern{e_1}{e_2}{e_3'}$.
             
             If $e_1 \val$ and $e_2 \val$ and $e_3 \val$, then by CF, $e_1 = \kwnumlit{n}{\kwInt}$.
             
-            If $n = 0$, then by \Rulename{TERN-1}, $e^* \step e_3$.
-            Otherwise, $n \neq 0$, so by \Rulename{TERN-2}, $e^* \step e_2$.
+            If $n = 0$, then by \Rname{S-Tern-0}, $e^* \step e_3$.
+            Otherwise, $n \neq 0$, so by \Rname{S-Tern-1}, $e^* \step e_2$.
         
-        \item \Rulename{Empty Tuple}
-            Then $e^* = ()$. By \Rulename{TUPLES-2}, $() \val$.
+        \item \Rname{T-Unit}
+            Then $e^* = ()$. All zero of the tuple's elements are values, so by \Rname{V-Tuples}, $() \val$.
         
-        \item \Rulename{Tuple Type}
+        \item \Rname{T-Tuple}
             Then $e^* = (e^*_t) = (e_1~ e_2~ ...~ e_n)$.
             
             By induction, $\forall e_i \in e^*_t$, $e_i \val$ or $e_i \step e_i'$.
             
-            If all elements are values, then $(e^*_t) \val$ by \Rulename{TUPLES-2}.
+            If all elements are values, then $(e^*_t) \val$ by \Rname{V-Tuple}.
             
-            Otherwise, one or more elements can step, including a leftmost steppable element $e_j \step e_j'$.
-            Then, by \Rulename{STEP}, $e^*_t \step [e_j' / e_j] e^*_t$, so by \Rulename{Tuples-1}, $e^* \step ([e_j' / e_j] e^*_t)$.
+            Otherwise, one or more elements can step, including a ``leftmost steppable element'' $e_j \step e_j'$.
+            Then, by \Rname{Step}, $e^*_t \step [e_j' / e_j] e^*_t$, so by \Rname{S-Tuple}, $e^* \step ([e_j' / e_j] e^*_t)$.
             
-        \item \Rulename{Unpack}
+        \item \Rname{T-Unpack}
             Then $e^* = \kwunpack{(e^*_t)}$.
             By induction, either $(e^*_t) \step (e^{*'}_t)$ or $(e^*_t) \val$.
             
-            If $(e^{*'}_t) \step (e^{*'}_t)$, then by \Rulename{STEP}, $\kwunpack{(e^*_t)} \step \kwunpack{(e^{*'}_t)}$.
+            If $(e^{*'}_t) \step (e^{*'}_t)$, then by \Rname{Step}, $\kwunpack{(e^*_t)} \step \kwunpack{(e^{*'}_t)}$.
             
-            If $(e^*_t) \val$, then by \Rulename{TUPLES-3}, $\kwunpack{(e^*_t)} \step e^*_t$.
+            If $(e^*_t) \val$, then by \Rname{S-Unpack}, $\kwunpack{(e^*_t)} \step e^*_t$.
         
-        \item \Rulename{Macro}
-            Then $e^* = m = \kwmacro{\tau^*}{e^*_t}$. $m \val$ by the premise.
+        \item \Rname{T-Macro}
+            Then $e^* = m = \kwmacro{\tau^*}{e^*_t}$. $m \val$ by the premise. A macro isn't well-typed if it's not a value, and it's not a value if it hasn't had its free variables bound using \Rname{Macro-Subst}.
         
-        \item \Rulename{Call}
+        \item \Rname{T-Call}
             Then $e^* = e^*_x~ e_f~ \textbf{@}$. By induction, either $e_i \val~ \forall~ e_i \in e^*_x$ or $e^*_x \step e^{*'}_x$.
             
-            If $e^*_x \step e^{*'}_x$, then by \Rulename{STEP}, $e^* \step e^{*'}_x~ e_f~ \textbf{@}$.
+            If $e^*_x \step e^{*'}_x$, then by \Rname{Step}, $e^* \step e^{*'}_x~ e_f~ \textbf{@}$.
             
             Otherwise, $e_i \val~ \forall~ e_i \in e^*_x$ and, by induction, $e_f \val$ or $e_f \step e_f'$.
             
-            If $e_f \step e_f'$, then by \Rulename{STEP}, $e^* \step e^*_x~ e_f'~ \textbf{@}$.
+            If $e_f \step e_f'$, then by \Rname{Step}, $e^* \step e^*_x~ e_f'~ \textbf{@}$.
             
-            Otherwise, $e_f \val$. To handwave a bit, by inversion on \Rulename{Macro}, $e_f$ is a macro with a body $e^*_b$, and by \Rulename{CALL-1}, $e^* \step e^*_b ~ \textbf{end_scope}$.
+            Otherwise, $e_f \val$. By CF, $e_f$ is either a macro or an application of $\kwfix{}{}$.
+            If it's a macro with a body $e^*_b$, then by \Rname{S-Call}, $e^* \step e^*_b ~ \textbf{end_scope}$.
+            If it's an application of $\kwfix{}{}$ to some $f$, then by \Rname{S-Fix}, $e^* \step e^*_x~ e_f~ f~ \textbf{@}$.
         
-        \item \Rulename{Identifier}
-            Then $e^* = \texttt{x}$.
-            By, uh, the other \Rulename{Identifier}, $e^*$ steps to a value in the store.
+        \item \Rname{T-Ident}
+            Then $e^* = \texttt{x}$ and some binding $\texttt{x} \step v$ is in scope.
+            By \Rname{S-Ident}, $e^* \step v$.
             
-        \item \Rulename{Let}
-            Then $e^* = e ~ \texttt{x} =$.
+        \item \Rname{T-Let}
+            Then $e^* = e ~ \kweid{x} =$.
             By induction, $e \val$ or $e \step e'$.
-            If $e \step e'$, then by \Rulename{STEP}, $e^* \step e' ~ \texttt{x} =$.
-            If $e \val$, then by the other \Rulename{LET}, $\sigma;e^* \step \sigma';\varepsilon$, where $\sigma'$ is, as described in the rule, $\sigma$ with $x \step e$ added to its ``topmost'' scope.
+            If $e \step e'$, then by \Rname{Step}, $e^* \step e' ~ \kweid{x} =$.
+            If $e \val$, then by \Rname{S-Let}, $\sigma;e^* \step \sigma';\varepsilon$, where $\sigma'$ is, as described in the rule, $\sigma$ with $\texttt{x} \step e$ added to its ``topmost'' scope.
         
-        \item \Rulename{Fix}
-            Then $e^* = \kwfix{e}{\tau_1}$.
+        \item \Rname{T-Fix}
+            Then $e^* = \kwfix{e}{\tau_1}$ where $\etyped{e}{\kwArrow{(\tau_{in}^* ~ \tau_1)}{\tau_{out}}}$ and $\tau_1 \prim$.
             By induction, $e \val$ or $e \step e'$.
-            If $e \step e'$, then by \Rulename{STEP}, $e^* \step \kwfix{e'}{\tau_1}$.
-            If $e \val$, then I think I'm missing something here, but by \Rulename{Fixed Point}, $e^* \val$.
+            If $e \step e'$, then by \Rname{Step}, $e^* \step \kwfix{e'}{\tau_1}$.
+            If $e \val$, then by \Rname{V-Fix}, $e^* \val$.
+        
+        \item \Rname{T-End}
+            Lemma: The presence of an \texttt{end_scope} operator on the stack to execute implies the presence of a scope in the store to pop. \\
+            Proof: \texttt{end_scope} is absent from the formal syntax, so it can only exist if it is introduced during execution. It is introduced exclusively via \Rname{S-Call}, which pushes exactly one scope, and eliminated exclusively via \Rname{S-End}, which pops exactly one scope.
+            
+            Then $e^* = \texttt{end_scope}$, and by the lemma, there is a scope to pop. Then by \Rname{S-End}, $e^* \step \varepsilon$.
     \end{itemize}
 \end{proof}
+
+\subsection{Lemma - Primitive Values}
+If $v \val$ and $\typed{v}{\tau}$, then $\tau \prim$.
+\begin{proof}
+By induction on the derivation of $v \val$.
+\begin{itemize}
+    \item \Rname{V-Num}
+        Then $v = \kwnumlit{n}{\tau}$ and $\tau \in {\kwInt, \kwLong, \kwFloat, \kwDouble}$. By \Rname{P-Num}, $\tau \prim$.
+
+    \item \Rname{V-Tuple}
+        Then $v = (v^*)$ and $\tau = (\tau_i^*)$ where $\etyped{v_i}{\tau_i}$ and $v_i \val~ \forall v_i \in v^*$.
+        By induction, $\tau_i \prim~ \forall \tau_i \in \tau^*$.
+        So by \Rname{P-Tuple}, $\tau \prim$.
+    
+    \item \Rname{Macro-Subst}
+        Then $v$ is a macro with its captures substituted in.
+        By \Rname{T-Macro}, $\tau$ is of the form $\kwArrow{\tau_1}{\tau_2}$.
+        By \Rname{P-Arrow}, $\tau \prim$.
+    
+    \item \Rname{V-Fix}
+        Then $v = \kwfix{m}{\tau_1}$ where $t_1 = \kwArrow{\tau_3^*}{\tau_4^*}$ and $\etyped{m}{\kwmacro{t_3^* ~ t_1}{t_4^*}}$.
+        Then $\etyped{v}{\tau_1}$ by \Rname{T-Fix}, meaning $\tau = \tau_1$, so by \Rname{P-Arrow}, $\tau \prim$.
+\end{itemize}
+\end{proof}
+
+\subsubsection{Lemma - Convergence}\footnote{a.k.a. Progress for Types, kinda}
+Part 1: $\tau^* \tstep \tau^{*\prime}$ is no longer possible when $\tau_i \prim ~ \forall~ \tau_i \in \tau^*$.
+\begin{proof}
+By induction on the derivation of $\tau \prim$.
+
+\begin{itemize}
+    \item \Rname{P-Num}
+        Then $\tau \in {\kwInt, \kwLong, \kwFloat, \kwDouble}$.
+        By exhaustion, there is no rule of the form $\tau \tstep \tau'$ that matches.
+
+    \item \Rname{P-Arrow}
+        Then $\tau = \kwArrow{\tau_1}{\tau_2}$ and $\tau_1 \prim$ and $\tau_2 \prim$.
+        By \Rname{Ty-Step}, $\tau$ can step if $\tau_1$ can step or if $\tau_1 \prim$ and $\tau_2$ can step, but by induction, neither $\tau_1$ nor $\tau_2$ can step.
+        By exhaustion, there is no other rule that would allow $\tau$ to step.
+
+    \item \Rname{P-Tuple}
+        Then $\tau = (\tau^*)$ where $\tau_i \prim ~ \forall \tau_i \in \tau^*$.
+        By \Rname{Ty-Tuple}, a tuple type can step if its elements collectively can.
+        By induction, they cannot.
+        By exhaustion, there is no other rule that would allow $\tau$ to step.
+\end{itemize}
+\end{proof}
+Part 2: $\tau^* \tstep \tau^{*\prime}$ will eventually step to a $\tau^{*\prime}$ such that $\tau_i \prim ~ \forall~ \tau_i \in \tau^{*\prime}$.
+\begin{proof}
+This is provable by the fact that the language does not feature recursive types and the only form of recursion in the language is via the fix operator and $\kwType{}$ operator does not have to follow recursive paths in order to get its type (Type Rules \Rname{T-Macro}, \Rname{T-Fix}). The other rules are trivial (i.e., step to a $\prim$) and/or irrelevant to the assertion.
+\end{proof}
+
 
 \subsection{Theorem - Preservation}
 If $\typed{\ctx}{e^*}{\tau^*}$ and $e^* \step e^{*\prime}$ then $\typed{\ctx}{e^{*\prime}}{\tau^{*\prime}}$ where $\tau^* \tstep^* \tau^{*\prime}$.
@@ -664,49 +691,80 @@ If $\typed{\ctx}{e^*}{\tau^*}$ and $e^* \step e^{*\prime}$ then $\typed{\ctx}{e^
 \begin{proof}
 By induction on the derivation of $e^* \step e^{*\prime}$.
 \begin{itemize}
-    \item \Rulename{STEP}
-        Then $e^* = v^* e_1 ... e_n$ and $e^ \step v^* e_1' ... e_n$ where $\etyped{e_1}{\tau}$ and $\etyped{e_1'}{\tau'}$.
-        By induction, $\tau \tstep^* \tau'$, so by \Rulename{TSTEP}, $\tau^* \tstep^* [\tau' / \tau]\tau^*$.
+    \item \Rname{Step}
+        Then $e^* = v^* e_1 ... e_n$ and $e^* \step v^* e_1' ... e_n$ where $\etyped{e_1}{\tau_1}$ and $\etyped{e_1'}{\tau_1'}$ and $v_i \val~ \forall v_i \in v^*$.
+        By induction, $\tau_1 \tstep^* \tau_1'$.
+        By the Primitive Values lemma, the types of those values on the left are all primitive, so by \Rname{Ty-Step}, $\tau^* \tstep^* [\tau_1' / \tau_1]\tau^* = \tau^{*\prime}$.
     
-    \item \Rulename{TUPLES-1}
+    \item \Rname{S-Tuple}
         Then $e^* = (e_{elem}^*)$ and $e^* \step (e_{elem}^{*\prime})$ and $\tau^* = (\tau_{elem}^*)$.
-        By induction, $\etyped{e_{elem}^{*\prime}}{\tau_{elem}^{*\prime}}$ where $\tau_{elem}^* \tstep^* \tau_{elem}^{*\prime}$. By \Rulename{Tuple Type}, $\etyped{(e_{elem}^{*\prime})}{(\tau_{elem}^{*'})}$, and by \Rulename{Tuple Types - 1}, $(\tau_{elem}^*) \tstep (\tau_{elem}^{*'})$.
+        By induction, $\etyped{e_{elem}^{*\prime}}{\tau_{elem}^{*\prime}}$ where $\tau_{elem}^* \tstep^* \tau_{elem}^{*\prime}$. By \Rname{T-Tuple}, $\etyped{(e_{elem}^{*\prime})}{(\tau_{elem}^{*'})}$, and by \Rname{Ty-Tuple}, $(\tau_{elem}^*) \tstep (\tau_{elem}^{*'})$.
         
-    \item \Rulename{LET}
-        Then $e^* = v ~ \texttt{\$x} ~ =$. By the other \Rulename{Let}, $\etyped{e^*}{\varepsilon}$, so $\tau^* = \varepsilon$. $e^* \step \varepsilon$, so $\tau^{*\prime} = \varepsilon$, so $\tau^* = \tau^{*\prime}$.
+    \item \Rname{S-Let}
+        Then $e^* = v ~ \texttt{\$x} ~ =$. By \Rname{T-Let}, $\etyped{e^*}{\varepsilon}$, so $\tau^* = \varepsilon$. $e^* \step \varepsilon$, so $\tau^* = \tau^{*\prime} = \varepsilon$.
 
-    \item \Rulename{Identifier}
-        Then $e^* = \texttt{x}$, where $\texttt{x} \step v$ is in scope. By the other \Rulename{Identifier}, the type of an identifier expression is the same as the type of the value in the store ($\etyped{v}{\tau}$), so $\tau^* = \tau^{*\prime} = \tau$.
+    \item \Rname{S-Ident}
+        Then $e^* = \texttt{x}$ and some binding $\texttt{x} \step v$ is in scope where $\etyped{v}{\tau_v}$. $e^* \step v$ and, by \Rname{T-Ident}, $\etyped{e^*}{\tau_v}$, so $\tau^* = \tau^{*\prime} = \tau_v$.
     
-    \item \Rulename{CALL-1}
-        Then $e^* = $.
-        % I think we need to modify (CALL-1) to require the values? Revisit.
+    \item \Rname{S-Call}
+        Then $e^* = m ~\textbf{@}$, where $m = \kwmacro{\tau_{in}^*}{e^*}$ and $m \val$.
+
+        This is going to get a little weird.
+        
+        First, \Rname{Macro-Subst} means that $m \val$ iff all its free variables have been replaced with captures.
+        
+        Next, \Rname{T-Macro} states that once that's done, a macro is well-typed only if it's ``ready to be called'' (appropriate arguments are on the stack), because its return type is ``whatever you get when you call it'', i.e., we're doing some kind of type inference because we tried too hard.
+        $e^*$ being well-typed is part of the theorem's premise, so the arguments are indeed in place, and we can call them $v^*$ (with types $\tau_{in}^*$, of course).
+        
+        To get the return type, we start with the $\kwType{(v^* ~ m ~ \textbf{@})}$ described in \Rname{T-Macro}.
+        By the Convergence lemma, we can step this type-expression to a primitive, and by \Rname{Ty-Typeof} and \Rname{T-Tuple}, the result will be a tuple type, which we can name $(\tau_{out}^*)$.
+        
+        That then gives us $\etyped{m}{\kwArrow{(\tau_{in}^*)}{(\tau)}}$.
+        As previously established, the necessary arguments $\etyped{v^*}{\tau_{in}^*}$ are on the stack,
+        so by \Rname{T-Call}, $\etyped{e^*}{\tau_{out}^*}$.
+        
+        $e^*$, a macro call, steps to the macro's expansion (i.e., its body plus an \texttt{end_scope}). The ``type signature'' of the macro's expansion steps to $\tau_{out}^*$. The type of $e^*$ also steps to $\tau_{out}^*$. That's preservation.
     
-    \item \Rulename{CALL-2}
-        % do we need a type rule for end_scope?
+    \item \Rname{S-Fix}
+        Then $e^* = f~ \textbf{@}$ where $f = \kwfix{v}{\tau}$ and $e^* \step e^{*\prime} f~ v~ \textbf{@}$.
+        
+        By \Rname{T-Call}, the type of $e^{*\prime}$ is inferred\footnote{I'm tired.} based on the expansion of $v$.
+        By \Rname{T-Fix}, this is also the case for $e^*$.
     
-    \item \Rulename{TUPLES-3}
+    \item \Rname{S-End}
+        Then $e^* = \texttt{end_scope}$. By \Rname{T-End}, $\etyped{e^*}{\varepsilon}$, so $\tau^* = \varepsilon$. $e^* \step \varepsilon$, so $\tau^* = \tau^{*\prime} = \varepsilon$.
+    
+    \item \Rname{S-Unpack}
         Then $e^* = \kwunpack{(v^*)}$, where $\etyped{v^*}{\tau_{elem}^*}$.
-        By \Rulename{Unpack}, $\tau^* = \tau_{elem}^*$. $e^* \step v^*$, so $\tau^{*\prime} = \tau^* = \tau_{elem}^*$.
+        By \Rname{T-Unpack}, $\tau^* = \tau_{elem}^*$. $e^* \step v^*$, so $\tau^{*\prime} = \tau^* = \tau_{elem}^*$.
     
-    \item \Rulename{ADD} \footnote{For these three rules, terms of the form $v_n$ are better expressed as numeric literals.}
-        Then $e^* = v_1~ v_2~ +$ and $e^* \step v_3$, where $\etyped{v_1}{\tau}$ and $\etyped{v_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
-        By \Rulename{T-5}, $\etyped{v_1~ v_2~ +}{\tau}$, and by the appropriate choice of \Rulename{T-1}, \Rulename{T-2}, \Rulename{T-3}, or \Rulename{T-4}, $\etyped{v_3}{\tau}$., so $\tau^* = \tau^{*\prime} = \tau$.
+    \item \Rname{S-Add}
+        Then $e^* = \kwnumlit{n_1}{\tau}~ \kwnumlit{n_2}{\tau}~ +$ and $e^* \step \kwnumlit{n_1 + n_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
+        By \Rname{T-Add}, $\etyped{\kwnumlit{n_1}{\tau}~ \kwnumlit{n_2}{\tau}~ +}{\tau}$, and by the appropriate choice of \Rname{T-Int}, \Rname{T-Long}, \Rname{T-Float}, or \Rname{T-Double}, $\etyped{v_3}{\tau}$, so $\tau^* = \tau^{*\prime} = \tau$.
     
-    \item \Rulename{MUL}
+    \item \Rname{S-Mul}
         Omitted for brevity on the grounds of being mechanically identical to the above case.
     
-    \item \Rulename{EQUIV}
-        Then $e^* = v_1~ v_2~ ==$ where $\etyped{v_1}{\tau}$ and $\etyped{v_2}{\tau}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
-        By \Rulename{T-8}, $\tau^* = \kwInt$.
-        $e^* \step \kwnumlit{n}{\kwInt}$, and by \Rulename{T-1}, $\etyped{\kwnumlit{n}{\kwInt}}{\kwInt}$, so $\tau^{*\prime} = \tau^* = \kwInt$.
+    \item \Rname{S-Eq}
+        Then $e^* = \kwnumlit{n_1}{\tau}~ \kwnumlit{n_2}{\tau}~ ==$ and $e^* \step \kwnumlit{(\delta_{n_1 n_2})}{\kwInt}$ for some $\tau \in \{\kwInt, \kwLong, \kwFloat, \kwDouble\}$.
+        By \Rname{T-Eq}, $\tau^* = \kwInt$.
+        By \Rname{T-Int}, $\etyped{\kwnumlit{(\delta_{n_1 n_2})}{\kwInt}}{\kwInt}$, so $\tau^{*\prime} = \tau^* = \kwInt$.
     
-    \item \Rulename{TERN-1}, \Rulename{TERN-2}
+    \item \Rname{S-Tern-0}, \Rname{S-Tern-1}
         Then $e^* = \kwtern{\kwnumlit{n}{\kwInt}}{v_1}{v_2}$ and $\etyped{v_1}{\tau}$ and $\etyped{v_2}{\tau}$ for some $\tau$.
-        By \Rulename{T-7}, $\etyped{e^*}{\tau}$, so $\tau^* = \tau$.
-        Either $e^* \step v_1$ or $e_* \step v_2$, so in either case, $\tau^{*\prime} = \tau$.
+        By \Rname{T-Tern}, $\etyped{e^*}{\tau}$, so $\tau^* = \tau$.
+        Either $e^* \step v_1$ or $e_* \step v_2$, so in either case, $\tau^* = \tau^{*\prime} = \tau$.
+
+    \item \Rname{Macro-Subst}
+        Then $e^*$ is a macro with free variables that steps to a macro with captures.
+        The fact that macros perform type inference based on the stack with which they're called (which isn't really known in the context of this rule) makes things pretty complicated, but it should still be the case that by the substitution lemma, this capturing changes nothing.
 \end{itemize}
 
 \end{proof}
+
+\section{Conclusion}
+As mentioned before the big takeaway was that we learned some flaws with the base language, notably that union types need to be redesigned.
+The semantics for the language are overly complicated, and while working on proofs we came up with some ideas for simplifying them further.
+We made light use of the lemmas for canonical forms and substitution, but for the former the cases were fairly trivial anyway, and for the latter, the proof case (and the rule it concerns) is somewhat weird and handwavy even with the lemma.
 
 \end{document}
